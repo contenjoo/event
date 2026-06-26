@@ -174,43 +174,42 @@
 <body>
 <header>
   <h1>🎁 오늘부터 캔바</h1>
-  <p>경품추첨 · 사람과 상품을 입력하고 돌려서 뽑으세요</p>
+  <p>🎉 오늘의 행운의 주인공은 누구?</p>
 </header>
 
 <div class="wrap">
   <!-- 입력 패널 -->
   <section class="card">
-    <h2>1. 입력</h2>
-    <label>👤 사람 (한 줄에 한 명)</label>
+    <h2>참가자 &amp; 경품</h2>
+    <label>👤 참가자</label>
     <textarea id="people" placeholder="홍길동&#10;김영희&#10;이철수"></textarea>
-    <label>🎁 상품 (한 줄에 하나)</label>
+    <label>🎁 경품</label>
     <textarea id="prizes" placeholder="치킨 기프티콘&#10;스타벅스 쿠폰&#10;꽝"></textarea>
 
-    <h2 style="margin-top:18px;">2. 모드</h2>
+    <h2 style="margin-top:18px;">추첨 방식</h2>
     <div class="modes">
-      <button class="mode-btn active" data-mode="single">🎯 한 개씩 뽑기</button>
+      <button class="mode-btn active" data-mode="single">🎯 한 명씩 추첨</button>
       <button class="mode-btn" data-mode="match">🔗 한 번에 매칭</button>
     </div>
 
     <div id="targetWrap">
-      <label>한 개씩 뽑을 때 — 무엇을 돌릴까요?</label>
+      <label>무엇을 추첨할까요?</label>
       <div class="target">
-        <button class="active" data-target="people">👤 사람 뽑기</button>
-        <button data-target="prizes">🎁 상품 뽑기</button>
+        <button class="active" data-target="people">👤 당첨자 뽑기</button>
+        <button data-target="prizes">🎁 경품 뽑기</button>
       </div>
-      <div class="hint">돌릴 때마다 룰렛에서 하나씩 뽑고, 뽑힌 건 제외됩니다.</div>
     </div>
 
     <div class="actions">
-      <button class="btn" id="spinBtn">🎰 돌리기</button>
-      <button class="btn ghost" id="resetBtn">↺ 초기화</button>
+      <button class="btn" id="spinBtn">🎰 추첨 시작!</button>
+      <button class="btn ghost" id="resetBtn">↺ 다시</button>
     </div>
     <div class="chips" id="poolChips"></div>
   </section>
 
   <!-- 결과 패널 -->
   <section class="card">
-    <h2>결과</h2>
+    <h2>추첨 결과</h2>
     <div class="stage">
       <div id="wheelStage" class="wheel-box">
         <div class="pointer"></div>
@@ -218,7 +217,7 @@
         <div class="center-cap">🎁</div>
       </div>
       <div class="result-banner" id="banner">
-        <div class="small">돌리기를 눌러 시작하세요</div>
+        <div class="small">두구두구… 추첨을 시작하세요!</div>
       </div>
       <div class="results-list" id="resultsList"></div>
     </div>
@@ -346,7 +345,7 @@
   function spinSingle() {
     const pool = activePool();
     const items = pool.map(o => o.label);
-    if (items.length === 0) { flash('더 이상 뽑을 항목이 없어요'); return; }
+    if (items.length === 0) { flash('🎉 모든 추첨이 끝났어요!'); return; }
     if (items.length === 1) { finishSingle(pool, 0); return; }
 
     spinning = true; spinBtn.disabled = true;
@@ -380,7 +379,7 @@
     const winner = pool[idx].label;
     drawn.push(pool[idx].idx);
     spinning = false; spinBtn.disabled = false;
-    const kind = target === 'people' ? '🎉 당첨자' : '🎁 뽑힌 상품';
+    const kind = target === 'people' ? '🎉 축하합니다! 당첨자' : '🎁 당첨 경품';
     banner.innerHTML = `<div class="small">${kind}</div><div class="big">${escapeHtml(winner)}</div>`;
     addResultRow(winner);
     confettiBurst();
@@ -389,7 +388,7 @@
 
   function addResultRow(winner) {
     if (!resultsList.dataset.init) {
-      resultsList.innerHTML = '<h3>뽑은 결과</h3>';
+      resultsList.innerHTML = '<h3>🏆 당첨자 명단</h3>';
       resultsList.dataset.init = '1';
     }
     const n = resultsList.querySelectorAll('.match-row').length + 1;
@@ -403,7 +402,7 @@
   function spinMatch() {
     const ppl = lines(peopleEl);
     const prz = lines(prizesEl);
-    if (ppl.length === 0 || prz.length === 0) { flash('사람과 상품을 모두 입력하세요'); return; }
+    if (ppl.length === 0 || prz.length === 0) { flash('참가자와 경품을 입력해 주세요'); return; }
 
     spinning = true; spinBtn.disabled = true;
     // quick visual spin then reveal
@@ -432,8 +431,8 @@
     while (pool.length < ppl.length) pool.push('꽝');
     pool = shuffle(pool).slice(0, ppl.length);
 
-    banner.innerHTML = `<div class="small">🔗 매칭 완료</div><div class="big">${ppl.length}명 결과</div>`;
-    resultsList.innerHTML = '<h3>매칭 결과</h3>';
+    banner.innerHTML = `<div class="small">🎉 추첨 완료</div><div class="big">${ppl.length}명 당첨!</div>`;
+    resultsList.innerHTML = '<h3>🏆 당첨 결과</h3>';
     resultsList.dataset.init = '1';
     ppl.forEach((person, i) => {
       const row = document.createElement('div');
@@ -465,8 +464,8 @@
       b.classList.add('active');
       mode = b.dataset.mode;
       drawn = []; angle = 0; clearResults();
-      spinBtn.textContent = mode === 'single' ? '🎰 돌리기' : '🎰 한 번에 매칭';
-      banner.innerHTML = '<div class="small">돌리기를 눌러 시작하세요</div>';
+      spinBtn.textContent = mode === 'single' ? '🎰 추첨 시작!' : '🎰 한 번에 매칭';
+      banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
       refresh();
     });
   });
@@ -477,7 +476,7 @@
       b.classList.add('active');
       target = b.dataset.target;
       drawn = []; angle = 0; clearResults();
-      banner.innerHTML = '<div class="small">돌리기를 눌러 시작하세요</div>';
+      banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
       refresh();
     });
   });
@@ -489,7 +488,7 @@
 
   resetBtn.addEventListener('click', () => {
     drawn = []; angle = 0; clearResults();
-    banner.innerHTML = '<div class="small">초기화되었습니다</div>';
+    banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
     refresh();
   });
 
