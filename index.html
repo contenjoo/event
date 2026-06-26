@@ -249,6 +249,7 @@
   let drawn = [];             // original-line indices already drawn (single mode)
   let angle = 0;              // current wheel rotation (radians)
   let spinning = false;
+  let order = [];             // shuffled display order (permutation of current wheel list indices)
 
   const PALETTE = ['#ff5d8f','#6c5ce7','#38d39f','#ffd36e','#4dabf7','#ff922b','#cc5de8','#22b8cf','#82c91e','#f06595'];
 
@@ -258,11 +259,37 @@
   function allItems() {
     return lines(target === 'people' ? peopleEl : prizesEl);
   }
-  // active pool as {label, idx} so identical names (동명이인) stay distinct
+  // source list shown on the wheel (people in match mode, active target in single)
+  function wheelSource() {
+    return mode === 'match' ? lines(peopleEl) : allItems();
+  }
+  // (re)shuffle the wheel display order — called when the list changes
+  function rebuildOrder() {
+    order = shuffle([...Array(wheelSource().length).keys()]);
+  }
+  // map original index -> display rank using the shuffled order
+  function orderRank(n) {
+    const seq = (order.length === n) ? order : [...Array(n).keys()];
+    const rank = new Array(n);
+    seq.forEach((origIdx, r) => { rank[origIdx] = r; });
+    return rank;
+  }
+  // active pool as {label, idx} in shuffled order; 동명이인 stay distinct via idx
   function activePool() {
-    return allItems()
+    const all = allItems();
+    const rank = orderRank(all.length);
+    return all
       .map((label, idx) => ({ label, idx }))
-      .filter(o => !drawn.includes(o.idx));
+      .filter(o => !drawn.includes(o.idx))
+      .sort((a, b) => rank[a.idx] - rank[b.idx]);
+  }
+  // people labels in shuffled order (match-mode wheel preview)
+  function orderedPeople() {
+    const all = lines(peopleEl);
+    const rank = orderRank(all.length);
+    return all.map((label, idx) => ({ label, idx }))
+      .sort((a, b) => rank[a.idx] - rank[b.idx])
+      .map(o => o.label);
   }
 
   // ---------- Wheel drawing ----------
@@ -336,7 +363,7 @@
     } else {
       targetWrap.style.display = 'none';
       wheelStage.style.display = '';
-      drawWheel(lines(peopleEl), angle); // show people on wheel as preview
+      drawWheel(orderedPeople(), angle); // show people on wheel (shuffled order)
     }
     renderChips();
   }
@@ -395,7 +422,8 @@
     const row = document.createElement('div');
     row.className = 'match-row';
     row.innerHTML = `<span class="who">#${n}</span><span class="gift">${escapeHtml(winner)}</span>`;
-    resultsList.appendChild(row);
+    // newest winner first: insert right after the heading
+    resultsList.querySelector('h3').insertAdjacentElement('afterend', row);
   }
 
   // ---------- Match mode ----------
@@ -431,17 +459,22 @@
     while (pool.length < ppl.length) pool.push('꽝');
     pool = shuffle(pool).slice(0, ppl.length);
 
-    banner.innerHTML = `<div class="small">🎉 추첨 완료</div><div class="big">${ppl.length}명 당첨!</div>`;
+    // pair people with prizes, then list actual winners (got a prize) before 꽝
+    const pairs = ppl.map((person, i) => ({ person, gift: pool[i] }));
+    pairs.sort((a, b) => (a.gift === '꽝' ? 1 : 0) - (b.gift === '꽝' ? 1 : 0));
+    const winnerCount = pairs.filter(p => p.gift !== '꽝').length;
+
+    banner.innerHTML = `<div class="small">🎉 추첨 완료</div><div class="big">${winnerCount}명 당첨!</div>`;
     resultsList.innerHTML = '<h3>🏆 당첨 결과</h3>';
     resultsList.dataset.init = '1';
-    ppl.forEach((person, i) => {
+    pairs.forEach(({ person, gift }, i) => {
       const row = document.createElement('div');
       row.className = 'match-row';
       row.style.animationDelay = (i * 0.08) + 's';
       row.innerHTML =
         `<span class="who">${escapeHtml(person)}</span>` +
         `<span class="arrow">→</span>` +
-        `<span class="gift">${escapeHtml(pool[i])}</span>` +
+        `<span class="gift">${escapeHtml(gift)}</span>` +
         `<span class="num">#${i+1}</span>`;
       resultsList.appendChild(row);
     });
@@ -463,7 +496,7 @@
       document.querySelectorAll('.mode-btn').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       mode = b.dataset.mode;
-      drawn = []; angle = 0; clearResults();
+      drawn = []; angle = 0; clearResults(); rebuildOrder();
       spinBtn.textContent = mode === 'single' ? '🎰 추첨 시작!' : '🎰 한 번에 매칭';
       banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
       refresh();
@@ -475,7 +508,7 @@
       document.querySelectorAll('.target button').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       target = b.dataset.target;
-      drawn = []; angle = 0; clearResults();
+      drawn = []; angle = 0; clearResults(); rebuildOrder();
       banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
       refresh();
     });
@@ -496,6 +529,8 @@
     // editing the active list shifts line indices → reset draw progress to stay aligned
     const activeEl = target === 'people' ? peopleEl : prizesEl;
     if (mode === 'single' && el === activeEl && drawn.length) { drawn = []; clearResults(); }
+    // reshuffle the wheel order when a name is added/removed (not on every keystroke)
+    if (wheelSource().length !== order.length) rebuildOrder();
     refresh();
   }));
 
@@ -531,6 +566,7 @@
   // init demo
   peopleEl.value = '홍길동\n김영희\n이철수\n박민수';
   prizesEl.value = '치킨 기프티콘\n스타벅스 쿠폰\n영화 예매권\n꽝';
+  rebuildOrder();
   refresh();
 })();
 </script>
