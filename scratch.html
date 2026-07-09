@@ -184,6 +184,10 @@
   .done-box .big-emoji { font-size: 54px; }
   .done-box h2 { margin: 12px 0 8px; }
   .done-box p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; }
+  .done-box .check-email {
+    display: block; margin-top: 4px; color: var(--gold); font-weight: 800;
+    font-size: 15px; line-height: 1.5;
+  }
 
   canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 26px; }
@@ -250,7 +254,6 @@
         <div class="big-emoji">📬</div>
         <h2>신청 완료!</h2>
         <p id="doneText"></p>
-        <button class="btn ghost" id="againBtn" style="margin-top:22px;">↺ 처음으로 (다음 참가자)</button>
       </div>
     </section>
 
@@ -521,7 +524,8 @@
         `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 ` +
         (early
           ? `<b>미리 받기</b> 요청이 접수되어 먼저 보내드릴게요! ⚡`
-          : `<b>8월 19일</b>에 일괄 발송해 드릴게요!`);
+          : `<b>8월 19일</b>에 일괄 발송해 드릴게요!`) +
+        `<br/><br/><span class="check-email">📧 경품 안내 메일을 꼭 확인해 주세요!<br/>(스팸함도 함께 확인해 주세요)</span>`;
       show('#stepDone');
       confettiBurst();
     } catch (err) {
@@ -530,15 +534,6 @@
       return;
     }
     btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
-  });
-
-  // next participant (event booth friendly)
-  $('#againBtn').addEventListener('click', () => {
-    state.prize = null; state.submitted = false;
-    form.reset();
-    ['#eName', '#eSchool', '#eEmail', '#eEmail2'].forEach(s => $(s).textContent = '');
-    show('#stepScratch');
-    buildTicket();
   });
 
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
