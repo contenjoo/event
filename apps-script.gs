@@ -1,5 +1,5 @@
 /**
- * 에듀테크 체험권 이벤트 — 응모 저장용 Google Apps Script
+ * 2026 쉐어워즈 (with 오늘배움) — 응모 저장용 Google Apps Script
  *
  * 설정 방법:
  * 1. https://sheets.new 에서 새 스프레드시트 생성 (이름 예: "에듀테크 체험 응모")
@@ -11,7 +11,7 @@
  * 5. 배포 후 나오는 웹 앱 URL을 복사해서
  *    scratch.html 의 SHEET_ENDPOINT 상수에 붙여넣기
  *
- * 시트 열 구성: 접수시각 | 이름 | 학교 | 이메일 | 선택 툴 | 체험 개월 | 중복여부
+ * 시트 열 구성: 접수시각 | 이름 | 학교 | 이메일 | 당첨 경품 | 미리받기 | 중복여부
  */
 
 var SHEET_NAME = '응모';
@@ -25,7 +25,7 @@ function doPost(e) {
     var sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_NAME);
-      sheet.appendRow(['접수시각', '이름', '학교', '이메일', '선택 툴', '체험 개월', '중복여부']);
+      sheet.appendRow(['접수시각', '이름', '학교', '이메일', '당첨 경품', '미리받기', '중복여부']);
       sheet.setFrozenRows(1);
     }
 
@@ -46,8 +46,8 @@ function doPost(e) {
       String(p.name || '').trim(),
       String(p.school || '').trim(),
       email,
-      String(p.tool || '').trim(),
-      String(p.months || '').trim(),
+      String(p.prize || '').trim(),
+      String(p.early || '').trim(),
       dup,
     ]);
 
@@ -67,7 +67,7 @@ function doGet() {
 // 편집기 테스트용: doPost를 직접 실행하지 말고 이 함수를 ▶ 실행하세요.
 // 시트에 테스트 행이 하나 추가되면 정상.
 function testDoPost() {
-  var fake = { parameter: { name: '테스트', school: '테스트초', email: 'test@example.com', tool: 'Snorkl', months: '3' } };
+  var fake = { parameter: { name: '테스트', school: '테스트초', email: 'test@example.com', prize: '주이즈 1년 이용권', early: '미리받기' } };
   var out = doPost(fake);
   Logger.log(out.getContent());
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>🎓 에듀테크 무료 체험권 긁기</title>
+<title>2026 쉐어워즈 — 디지로그, 나만의 수업 속도를 찾아서</title>
 <style>
   :root {
     --bg: #0f1226;
@@ -25,9 +25,16 @@
     color: var(--text);
     min-height: 100vh;
   }
-  header { text-align: center; padding: 30px 16px 6px; }
-  header h1 { margin: 0; font-size: 26px; letter-spacing: -0.5px; }
-  header p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+  header { text-align: center; padding: 32px 16px 6px; }
+  header .year { font-size: 13px; font-weight: 800; letter-spacing: 3px; color: var(--accent); }
+  header h1 { margin: 4px 0 0; font-size: 30px; letter-spacing: -0.5px; }
+  header .sub {
+    margin: 8px 0 0; font-size: 15.5px; font-weight: 700;
+    background: linear-gradient(135deg, var(--gold), var(--accent));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header .with { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+  header .with b { color: var(--text); }
 
   .wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
   .card {
@@ -45,29 +52,7 @@
   h2 { margin: 0 0 16px; font-size: 19px; }
   h2 b { color: var(--gold); }
 
-  /* ---- step 1: tool select ---- */
-  .tool {
-    display: flex; align-items: center; gap: 14px;
-    width: 100%; text-align: left;
-    background: #141934; border: 2px solid var(--border); border-radius: 14px;
-    padding: 16px; margin-bottom: 12px; cursor: pointer;
-    color: var(--text); font-family: inherit; transition: .15s;
-  }
-  .tool:hover, .tool:focus-visible { border-color: var(--accent-2); transform: translateY(-1px); }
-  .tool:active { transform: translateY(1px); }
-  .tool .logo { font-size: 30px; }
-  .tool .name { font-size: 17px; font-weight: 800; }
-  .tool .desc { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
-  .tool .go { margin-left: auto; color: var(--accent); font-size: 18px; }
-
-  /* ---- step 2: scratch ---- */
-  .picked {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: #141934; border: 1px solid var(--border); border-radius: 999px;
-    padding: 6px 14px; font-size: 13.5px; font-weight: 700; margin-bottom: 16px;
-  }
-  .picked .re { color: var(--muted); font-weight: 500; font-size: 12px; cursor: pointer; text-decoration: underline; }
-
+  /* ---- scratch ---- */
   .scratch-zone { display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .ticket {
     position: relative; width: 100%; max-width: 400px;
@@ -94,10 +79,14 @@
   }
   .cell .under {
     position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    padding: 0 4px;
   }
-  .cell .under .sym { font-size: 36px; line-height: 1; }
-  .cell .under .mon { font-size: 12.5px; font-weight: 800; color: var(--muted); }
+  .cell .under .sym { font-size: 32px; line-height: 1; }
+  .cell .under .mon {
+    font-size: 10.5px; font-weight: 800; color: var(--muted);
+    text-align: center; line-height: 1.25; word-break: keep-all;
+  }
   .cell canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
   .cell canvas:active { cursor: grabbing; }
   .cell.open canvas { transition: opacity .3s ease; opacity: 0; pointer-events: none; }
@@ -133,11 +122,22 @@
   }
   @keyframes hotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
+  /* prize lineup teaser */
+  .lineup {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+    max-width: 400px;
+  }
+  .lineup .chip {
+    background: #141934; border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px; font-size: 11.5px; color: var(--muted); font-weight: 600;
+  }
+  .lineup .chip.rare { border-color: rgba(255,211,110,.5); color: var(--gold); }
+
   /* full-screen white flash on win */
   #flash { position: fixed; inset: 0; z-index: 60; pointer-events: none; background: #fff; opacity: 0; }
   @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
 
-  /* ---- step 3: form ---- */
+  /* ---- form ---- */
   .prize-summary {
     display: flex; align-items: center; gap: 10px;
     background: #141934; border: 1px solid var(--border); border-radius: 12px;
@@ -152,6 +152,18 @@
   }
   input:focus { outline: none; border-color: var(--accent-2); }
   .err { color: var(--accent); font-size: 12px; margin-top: 5px; min-height: 15px; }
+
+  .notice {
+    background: #141934; border: 1px solid var(--border); border-left: 3px solid var(--gold);
+    border-radius: 10px; padding: 11px 13px; margin-top: 18px;
+    font-size: 13px; color: var(--muted); line-height: 1.55;
+  }
+  .notice b { color: var(--gold); }
+  .check-row {
+    display: flex; align-items: center; gap: 9px;
+    margin: 12px 0 0; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer;
+  }
+  .check-row input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
 
   .btn {
     width: 100%; margin-top: 6px; padding: 14px;
@@ -179,43 +191,35 @@
 </head>
 <body>
 <header>
-  <h1>🎓 에듀테크 무료 체험권 이벤트</h1>
-  <p>같은 그림 3개를 찾으면 체험권 당첨!</p>
+  <div class="year">2026</div>
+  <h1>쉐어워즈</h1>
+  <p class="sub">디지로그, 나만의 수업 속도를 찾아서</p>
+  <p class="with">with <b>오늘배움</b></p>
 </header>
 
 <div class="wrap">
   <div class="card">
 
-    <!-- STEP 1: choose tool -->
-    <section class="step on" id="step1">
-      <div class="step-label">STEP 1 / 3</div>
-      <h2>어떤 에듀테크를 체험해 보고 싶나요?</h2>
-      <div id="toolList"></div>
-    </section>
-
-    <!-- STEP 2: scratch match-3 -->
-    <section class="step" id="step2">
-      <div class="step-label">STEP 2 / 3</div>
+    <!-- STEP 1: scratch match-3 -->
+    <section class="step on" id="stepScratch">
+      <div class="step-label">STEP 1 / 2</div>
       <h2>같은 그림 <b>3개</b>를 찾으면 당첨!</h2>
-      <div class="picked">
-        <span id="pickedLabel"></span>
-        <span class="re" id="repick">다시 선택</span>
-      </div>
       <div class="scratch-zone">
         <div class="ticket" id="ticket">
           <div class="ticket-title">✨ 행운의 즉석복권 ✨</div>
           <div class="cells" id="cells"></div>
         </div>
         <div class="match-status" id="matchStatus"></div>
+        <div class="lineup" id="lineup"></div>
         <button class="btn" id="claimBtn" style="display:none;"></button>
       </div>
     </section>
 
-    <!-- STEP 3: form -->
-    <section class="step" id="step3">
-      <div class="step-label">STEP 3 / 3</div>
-      <h2>체험권 받을 정보를 알려주세요</h2>
-      <div class="prize-summary">🎁 <span><b id="summaryText"></b> 체험권이 준비됐어요!</span></div>
+    <!-- STEP 2: form -->
+    <section class="step" id="stepForm">
+      <div class="step-label">STEP 2 / 2</div>
+      <h2>경품 받을 정보를 알려주세요</h2>
+      <div class="prize-summary">🎁 <span><b id="summaryText"></b> 당첨!</span></div>
       <form id="entryForm" novalidate>
         <label for="fName">이름</label>
         <input id="fName" name="name" autocomplete="name" placeholder="홍길동" required />
@@ -226,7 +230,17 @@
         <label for="fEmail">이메일</label>
         <input id="fEmail" name="email" type="email" autocomplete="email" placeholder="teacher@school.kr" required />
         <div class="err" id="eEmail"></div>
-        <button class="btn" id="submitBtn" type="submit">✅ 체험권 신청하기</button>
+        <label for="fEmail2">이메일 확인 <span style="color:var(--accent);">(한 번 더 정확히!)</span></label>
+        <input id="fEmail2" name="email2" type="email" autocomplete="off" placeholder="이메일을 다시 입력해 주세요" required />
+        <div class="err" id="eEmail2"></div>
+
+        <div class="notice">🗓️ 경품은 <b>8월 19일</b>에 입력하신 이메일로 <b>일괄 발송</b>될 예정이에요.</div>
+        <label class="check-row" for="fEarly">
+          <input type="checkbox" id="fEarly" />
+          <span>⚡ 미리 받고 싶어요 (8월 19일 전에 먼저 발송)</span>
+        </label>
+
+        <button class="btn" id="submitBtn" type="submit">✅ 경품 신청하기</button>
       </form>
     </section>
 
@@ -245,33 +259,28 @@
 
 <canvas id="confetti"></canvas>
 <div id="flash"></div>
-<footer>🎓 에듀테크 체험 이벤트</footer>
+<footer>2026 쉐어워즈 · with 오늘배움</footer>
 
 <script>
 (() => {
   // ================= CONFIG =================
-  // Google Apps Script 웹 앱 URL을 여기에 붙여넣으세요 (설정법: apps-script.gs 참고)
-  const SHEET_ENDPOINT = '';
+  // Google Apps Script 웹 앱 URL (설정법: apps-script.gs 참고)
+  const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyUyqugG6Q4snJl1tuy64N4j_6_6FkIZ1v29beGZfJ1cyCaNl3zektciC1eBPw2Qp5ekA/exec';
 
-  const TOOLS = [
-    { id: 'Snorkl',   emoji: '🎤', desc: '학생의 생각을 음성·화이트보드로 녹화하고 AI 피드백까지' },
-    { id: 'Redmenta', emoji: '📝', desc: 'AI로 워크시트·퀴즈를 뚝딱 만드는 스마트 학습지 플랫폼' },
-    { id: 'Mizou',    emoji: '🤖', desc: '우리 반 맞춤 교육용 AI 챗봇을 직접 만드는 플랫폼' },
-  ];
-
-  // 체험 기간 확률 (weight 비율로 추첨) — 필요하면 숫자만 바꾸세요
-  // 현재: 1개월 60% / 2개월 30% / 3개월 10%
+  // 경품 풀 — weight 비율로 추첨 (합계 대비 %). 숫자·문구만 바꾸면 됨.
+  // short: 복권 칸에 표시되는 짧은 이름 / full: 당첨 안내·시트 기록용 전체 이름
   const PRIZES = [
-    { months: 1, weight: 6 },
-    { months: 2, weight: 3 },
-    { months: 3, weight: 1 },
+    { emoji: '👑', short: '주이즈 1년',        full: '주이즈 1년 이용권',                          weight: 1 },  //  4%
+    { emoji: '🎤', short: 'Snorkl 평생 +10',   full: 'Snorkl 과제 한도 평생 +10개 (20→30)',        weight: 2 },  //  8%
+    { emoji: '🚀', short: 'Snorkl+Redmenta',   full: 'Snorkl 3개월 + Redmenta 3개월 콤보',         weight: 3 },  // 12%
+    { emoji: '🎁', short: 'Redmenta+Mizou',    full: 'Redmenta 3개월 + Mizou 3개월 콤보',          weight: 4 },  // 16%
+    { emoji: '🤖', short: 'Mizou 3개월',       full: 'Mizou 3개월 이용권',                         weight: 7 },  // 28%
+    { emoji: '🎈', short: 'Snorkl 1개월',      full: 'Snorkl 1개월 이용권',                        weight: 8 },  // 32%
   ];
-
-  const SYMBOLS = { 1: '🎈', 2: '🎁', 3: '👑' };
   // ==========================================
 
   const $ = (s) => document.querySelector(s);
-  const state = { tool: null, months: null, submitted: false };
+  const state = { prize: null, submitted: false };
 
   // ---------- step navigation ----------
   function show(id) {
@@ -280,42 +289,28 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ---------- step 1: tools ----------
-  const toolList = $('#toolList');
-  TOOLS.forEach(t => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tool';
-    b.innerHTML =
-      `<span class="logo">${t.emoji}</span>` +
-      `<span><span class="name">${t.id}</span><div class="desc">${t.desc}</div></span>` +
-      `<span class="go">›</span>`;
-    b.addEventListener('click', () => pickTool(t));
-    toolList.appendChild(b);
-  });
-
-  function pickTool(t) {
-    state.tool = t.id;
-    state.months = drawMonths();
-    $('#pickedLabel').textContent = `${t.emoji} ${t.id} 선택됨`;
-    show('#step2'); // ticket needs layout before the foil can be painted
-    buildTicket();
-  }
-  $('#repick').addEventListener('click', () => { stopHeartbeat(); show('#step1'); });
-
-  function drawMonths() {
+  function drawPrize() {
     const total = PRIZES.reduce((s, p) => s + p.weight, 0);
     let r = Math.random() * total;
-    for (const p of PRIZES) { r -= p.weight; if (r < 0) return p.months; }
-    return PRIZES[0].months;
+    for (const p of PRIZES) { r -= p.weight; if (r < 0) return p; }
+    return PRIZES[PRIZES.length - 1];
   }
 
-  // ---------- step 2: match-3 scratch ticket ----------
+  // prize lineup teaser (rarest two get gold chips)
+  const lineup = $('#lineup');
+  PRIZES.forEach((p, i) => {
+    const c = document.createElement('span');
+    c.className = 'chip' + (i < 2 ? ' rare' : '');
+    c.textContent = `${p.emoji} ${p.short}`;
+    lineup.appendChild(c);
+  });
+
+  // ---------- match-3 scratch ticket ----------
   const ticket = $('#ticket');
   const cellsEl = $('#cells');
   const matchStatus = $('#matchStatus');
   const claimBtn = $('#claimBtn');
-  let cells = [];   // { m, el, canvas, ctx, opened, moves }
+  let cells = [];   // { p(prize), el, canvas, ctx, opened, moves }
   let won = false;
 
   function shuffleArr(a) {
@@ -329,28 +324,31 @@
 
   function buildTicket() {
     won = false;
+    state.prize = drawPrize();
     stopHeartbeat();
     ticket.classList.remove('suspense', 'revealed');
     claimBtn.style.display = 'none';
     setStatus('🪙 은박을 긁어서 같은 그림 3개를 찾아보세요!');
 
-    // winning symbol ×3, decoys ×2 and ×1 — only the winner can reach 3
-    const others = shuffleArr([1, 2, 3].filter(m => m !== state.months));
+    // 3×3 board: winning prize ×3, three decoy prizes ×2 each — only the winner can reach 3
+    const others = shuffleArr(PRIZES.filter(p => p !== state.prize)).slice(0, 3);
     const layout = shuffleArr([
-      state.months, state.months, state.months,
-      others[0], others[0], others[1],
+      state.prize, state.prize, state.prize,
+      others[0], others[0],
+      others[1], others[1],
+      others[2], others[2],
     ]);
 
     cellsEl.innerHTML = '';
-    cells = layout.map(m => {
+    cells = layout.map(p => {
       const el = document.createElement('div');
       el.className = 'cell';
       el.innerHTML =
-        `<div class="under"><div class="sym">${SYMBOLS[m]}</div><div class="mon">${m}개월</div></div>` +
+        `<div class="under"><div class="sym">${p.emoji}</div><div class="mon">${p.short}</div></div>` +
         `<canvas></canvas>`;
       cellsEl.appendChild(el);
       const canvas = el.querySelector('canvas');
-      const cell = { m, el, canvas, ctx: canvas.getContext('2d'), opened: false, moves: 0 };
+      const cell = { p, el, canvas, ctx: canvas.getContext('2d'), opened: false, moves: 0 };
       attachScratch(cell);
       return cell;
     });
@@ -423,23 +421,23 @@
     popSound();
     if ('vibrate' in navigator) navigator.vibrate(20);
 
-    const counts = {};
-    cells.filter(c => c.opened).forEach(c => { counts[c.m] = (counts[c.m] || 0) + 1; });
+    const counts = new Map();
+    cells.filter(c => c.opened).forEach(c => counts.set(c.p, (counts.get(c.p) || 0) + 1));
 
-    if (counts[cell.m] === 3) { winReveal(cell.m); return; }
+    if (counts.get(cell.p) === 3) { winReveal(cell.p); return; }
 
-    // status: whichever symbol currently leads
-    const [bestM, bestN] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    // status: whichever prize currently leads
+    const [bestP, bestN] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
     if (bestN === 2) {
-      setStatus(`🔥 ${SYMBOLS[bestM]} ${bestM}개월 ×2!! 같은 그림 하나만 더…!`, true);
+      setStatus(`🔥 ${bestP.emoji} ${bestP.short} ×2!! 같은 그림 하나만 더…!`, true);
       ticket.classList.add('suspense');
       startHeartbeat();
     } else {
-      setStatus(`${SYMBOLS[cell.m]} ${cell.m}개월 발견! 같은 그림 ${3 - counts[cell.m]}개 더 나오면 당첨`);
+      setStatus(`${cell.p.emoji} ${cell.p.short} 발견! 같은 그림 ${3 - counts.get(cell.p)}개 더 나오면 당첨`);
     }
   }
 
-  function winReveal(m) {
+  function winReveal(p) {
     won = true;
     stopHeartbeat();
     ticket.classList.remove('suspense');
@@ -450,15 +448,15 @@
       // open the whole board, spotlight the winning trio
       cells.forEach(c => {
         if (!c.opened) { c.opened = true; c.el.classList.add('open'); }
-        c.el.classList.add(c.m === m ? 'winhit' : 'dimmed');
+        c.el.classList.add(c.p === p ? 'winhit' : 'dimmed');
       });
       ticket.classList.add('revealed');
       flashScreen();
       playFanfare();
       confettiBurst();
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
-      setStatus(`🎉 ${SYMBOLS[m]} ${m}개월 무료 체험권 당첨!`, true);
-      claimBtn.textContent = `🎁 ${m}개월 체험권 받기`;
+      setStatus(`🎉 ${p.emoji} ${p.full} 당첨!`, true);
+      claimBtn.textContent = `🎁 경품 받기`;
       claimBtn.style.display = '';
     }, 1000);
   }
@@ -469,16 +467,16 @@
   }
 
   window.addEventListener('resize', () => {
-    if ($('#step2').classList.contains('on')) cells.filter(c => !c.opened).forEach(paintCellFoil);
+    if ($('#stepScratch').classList.contains('on')) cells.filter(c => !c.opened).forEach(paintCellFoil);
   });
 
   claimBtn.addEventListener('click', () => {
-    $('#summaryText').textContent = `${state.tool} ${state.months}개월 무료`;
-    show('#step3');
+    $('#summaryText').textContent = `${state.prize.emoji} ${state.prize.full}`;
+    show('#stepForm');
     $('#fName').focus();
   });
 
-  // ---------- step 3: form ----------
+  // ---------- form ----------
   const form = $('#entryForm');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -492,40 +490,52 @@
     $('#eSchool').textContent = school ? '' : '학교를 입력해 주세요'; ok = ok && !!school;
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     $('#eEmail').textContent = emailOk ? '' : '올바른 이메일을 입력해 주세요'; ok = ok && emailOk;
+    const email2 = $('#fEmail2').value.trim();
+    const email2Ok = !!email2 && email2.toLowerCase() === email.toLowerCase();
+    $('#eEmail2').textContent = email2
+      ? (email2Ok ? '' : '위에 적은 이메일과 달라요 — 다시 확인해 주세요')
+      : '이메일을 한 번 더 입력해 주세요';
+    ok = ok && email2Ok;
     if (!ok) return;
+    const early = $('#fEarly').checked;
 
     const btn = $('#submitBtn');
     btn.disabled = true; btn.textContent = '전송 중…';
     try {
       if (SHEET_ENDPOINT) {
-        await fetch(SHEET_ENDPOINT, {
+        // 단순 요청(form-urlencoded)이라 Apps Script가 CORS 허용 — 실패(권한 설정 오류 등) 감지 가능
+        const res = await fetch(SHEET_ENDPOINT, {
           method: 'POST',
-          mode: 'no-cors', // Apps Script는 CORS 헤더가 없어 opaque 응답으로 전송
-          body: new URLSearchParams({ name, school, email, tool: state.tool, months: state.months }),
+          body: new URLSearchParams({ name, school, email, prize: state.prize.full, early: early ? '미리받기' : '' }),
         });
+        if (!res.ok) throw new Error('submit failed: ' + res.status);
       } else {
-        console.warn('SHEET_ENDPOINT 미설정 — 응모 데이터가 저장되지 않았습니다', { name, school, email, tool: state.tool, months: state.months });
+        console.warn('SHEET_ENDPOINT 미설정 — 응모 데이터가 저장되지 않았습니다', { name, school, email, prize: state.prize.full, early });
       }
       state.submitted = true;
       $('#doneText').innerHTML =
-        `<b>${escapeHtml(name)}</b> 선생님, <b>${escapeHtml(state.tool)} ${state.months}개월 무료 체험권</b> 신청이 접수됐어요.<br/>` +
-        `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 안내를 보내드릴게요!`;
+        `<b>${escapeHtml(name)}</b> 선생님, <b>${escapeHtml(state.prize.full)}</b> 신청이 접수됐어요.<br/>` +
+        `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 ` +
+        (early
+          ? `<b>미리 받기</b> 요청이 접수되어 먼저 보내드릴게요! ⚡`
+          : `<b>8월 19일</b>에 일괄 발송해 드릴게요!`);
       show('#stepDone');
       confettiBurst();
     } catch (err) {
-      btn.disabled = false; btn.textContent = '✅ 체험권 신청하기';
+      btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
       $('#eEmail').textContent = '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
       return;
     }
-    btn.disabled = false; btn.textContent = '✅ 체험권 신청하기';
+    btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
   });
 
   // next participant (event booth friendly)
   $('#againBtn').addEventListener('click', () => {
-    state.tool = null; state.months = null; state.submitted = false;
+    state.prize = null; state.submitted = false;
     form.reset();
-    ['#eName', '#eSchool', '#eEmail'].forEach(s => $(s).textContent = '');
-    show('#step1');
+    ['#eName', '#eSchool', '#eEmail', '#eEmail2'].forEach(s => $(s).textContent = '');
+    show('#stepScratch');
+    buildTicket();
   });
 
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -596,6 +606,9 @@
     if (parts.length) requestAnimationFrame(ctick);
     else { cctx.clearRect(0, 0, cc.width, cc.height); confettiBurst.running = false; }
   }
+
+  // ---------- init ----------
+  buildTicket();
 })();
 </script>
 </body>
