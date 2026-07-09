@@ -271,7 +271,7 @@
   // short: 복권 칸에 표시되는 짧은 이름 / full: 당첨 안내·시트 기록용 전체 이름
   const PRIZES = [
     { emoji: '👑', short: '주이즈 1년',        full: '주이즈 1년 이용권',                          weight: 1 },  //  4%
-    { emoji: '🎤', short: 'Snorkl 평생 +10',   full: 'Snorkl 과제 한도 평생 +10개 (20→30)',        weight: 2 },  //  8%
+    { emoji: '🎤', short: 'Snorkl 과제 +10',   full: 'Snorkl 과제 10개 추가',                       weight: 2 },  //  8%
     { emoji: '🚀', short: 'Snorkl+Redmenta',   full: 'Snorkl 3개월 + Redmenta 3개월 콤보',         weight: 3 },  // 12%
     { emoji: '🎁', short: 'Redmenta+Mizou',    full: 'Redmenta 3개월 + Mizou 3개월 콤보',          weight: 4 },  // 16%
     { emoji: '🤖', short: 'Mizou 3개월',       full: 'Mizou 3개월 이용권',                         weight: 7 },  // 28%
@@ -330,13 +330,16 @@
     claimBtn.style.display = 'none';
     setStatus('🪙 은박을 긁어서 같은 그림 3개를 찾아보세요!');
 
-    // 3×3 board: winning prize ×3, three decoy prizes ×2 each — only the winner can reach 3
-    const others = shuffleArr(PRIZES.filter(p => p !== state.prize)).slice(0, 3);
+    // 3×4 board (12 cells): winning prize ×3, five decoys (four ×2 + one ×1)
+    // — every decoy caps at 2 so only the winner can reach 3
+    const others = shuffleArr(PRIZES.filter(p => p !== state.prize)).slice(0, 5);
     const layout = shuffleArr([
       state.prize, state.prize, state.prize,
       others[0], others[0],
       others[1], others[1],
       others[2], others[2],
+      others[3], others[3],
+      others[4],
     ]);
 
     cellsEl.innerHTML = '';
