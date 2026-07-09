@@ -160,10 +160,27 @@
   }
   .notice b { color: var(--gold); }
   .check-row {
-    display: flex; align-items: center; gap: 9px;
-    margin: 12px 0 0; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer;
+    display: flex; align-items: center; gap: 11px;
+    margin: 12px 0 0; padding: 13px 14px;
+    background: #141934; border: 2px solid var(--border); border-radius: 12px;
+    font-size: 14px; font-weight: 700; color: var(--text); cursor: pointer;
+    transition: border-color .15s, background .15s;
   }
-  .check-row input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .check-row:hover { border-color: var(--accent-2); }
+  .check-row input { position: absolute; opacity: 0; pointer-events: none; }
+  .check-row .box {
+    flex: 0 0 auto; width: 24px; height: 24px; border-radius: 7px;
+    border: 2px solid var(--muted); background: #0d1024;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: #fff; transition: .15s;
+  }
+  .check-row .box::after { content: '✓'; opacity: 0; font-weight: 900; transform: scale(.5); transition: .15s; }
+  .check-row .sub { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+  .check-row input:checked ~ .box {
+    border-color: var(--accent); background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .check-row input:checked ~ .box::after { opacity: 1; transform: scale(1); }
+  .check-row.checked { border-color: var(--accent); background: rgba(255,93,143,.08); }
 
   .btn {
     width: 100%; margin-top: 6px; padding: 14px;
@@ -239,9 +256,10 @@
         <div class="err" id="eEmail2"></div>
 
         <div class="notice">🗓️ 경품은 <b>8월 19일</b>에 입력하신 이메일로 <b>일괄 발송</b>될 예정이에요.</div>
-        <label class="check-row" for="fEarly">
+        <label class="check-row" id="earlyRow" for="fEarly">
           <input type="checkbox" id="fEarly" />
-          <span>⚡ 미리 받고 싶어요 (8월 19일 전에 먼저 발송)</span>
+          <span class="box"></span>
+          <span>⚡ 미리 받고 싶어요<span class="sub">다음 주 월요일에 먼저 보내드려요</span></span>
         </label>
 
         <button class="btn" id="submitBtn" type="submit">✅ 경품 신청하기</button>
@@ -482,6 +500,11 @@
     $('#fName').focus();
   });
 
+  // early-delivery checkbox: highlight the row when checked
+  $('#fEarly').addEventListener('change', (e) => {
+    $('#earlyRow').classList.toggle('checked', e.target.checked);
+  });
+
   // ---------- form ----------
   const form = $('#entryForm');
   form.addEventListener('submit', async (e) => {
@@ -523,7 +546,7 @@
         `<b>${escapeHtml(name)}</b> 선생님, <b>${escapeHtml(state.prize.full)}</b> 신청이 접수됐어요.<br/>` +
         `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 ` +
         (early
-          ? `<b>미리 받기</b> 요청이 접수되어 먼저 보내드릴게요! ⚡`
+          ? `<b>미리 받기</b> 요청이 접수되어 <b>다음 주 월요일</b>에 먼저 보내드릴게요! ⚡`
           : `<b>8월 19일</b>에 일괄 발송해 드릴게요!`) +
         `<br/><br/><span class="check-email">📧 경품 안내 메일을 꼭 확인해 주세요!<br/>(스팸함도 함께 확인해 주세요)</span>`;
       show('#stepDone');
