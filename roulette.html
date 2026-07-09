@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎁 오늘부터 캔바</title>
+<style>
+  :root {
+    --bg: #0f1226;
+    --panel: #1a1f3c;
+    --panel-2: #232a52;
+    --accent: #ff5d8f;
+    --accent-2: #6c5ce7;
+    --text: #eef1ff;
+    --muted: #9aa3cf;
+    --good: #38d39f;
+    --border: #2e3566;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: radial-gradient(1200px 600px at 70% -10%, #2a2f63 0%, var(--bg) 55%) fixed;
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    padding: 28px 16px 8px;
+  }
+  header h1 { margin: 0; font-size: 30px; letter-spacing: -0.5px; }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 880px) {
+    .wrap { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 17px; }
+
+  label { display:block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+  textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    background: #11152e;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    font-family: inherit;
+  }
+  textarea:focus { outline: none; border-color: var(--accent-2); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .modes { display:flex; gap: 8px; margin: 6px 0 4px; }
+  .mode-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #141934;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: .15s;
+  }
+  .mode-btn.active {
+    background: linear-gradient(135deg, var(--accent-2), var(--accent));
+    border-color: transparent;
+  }
+
+  .target {
+    display:flex; gap: 8px; margin-top: 10px;
+  }
+  .target button {
+    flex:1; padding: 9px; border-radius: 10px; cursor:pointer;
+    border:1px solid var(--border); background:#141934; color:var(--text);
+    font-size:13px; font-weight:600;
+  }
+  .target button.active { background: var(--panel-2); border-color: var(--accent); color: var(--accent); }
+
+  .actions { display:flex; gap: 8px; margin-top: 16px; }
+  .btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    transition: transform .08s, opacity .2s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: #1d2347; border: 1px solid var(--border); }
+
+  .stage {
+    display:flex; flex-direction: column; align-items: center; gap: 16px;
+    min-height: 460px; justify-content: center; position: relative;
+  }
+  .wheel-box { position: relative; width: 420px; max-width: 90vw; }
+  .pointer {
+    position:absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; z-index: 5;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-top: 28px solid var(--accent);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.5));
+  }
+  canvas#wheel { width: 100%; height: auto; display:block; }
+  .center-cap {
+    position:absolute; top:50%; left:50%; transform: translate(-50%,-50%);
+    width: 64px; height: 64px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff, #c9cef0);
+    border: 4px solid var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 24px; z-index: 4; box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  }
+
+  .result-banner {
+    text-align:center; min-height: 30px;
+  }
+  .result-banner .big {
+    font-size: 26px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), #ffd36e);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .result-banner .small { color: var(--muted); font-size: 13px; }
+
+  .results-list { width: 100%; margin-top: 4px; }
+  .results-list h3 { font-size: 14px; color: var(--muted); margin: 0 0 8px; font-weight:600; }
+  .match-row {
+    display:flex; align-items:center; gap: 10px;
+    background:#141934; border:1px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;
+    animation: pop .35s ease;
+  }
+  .match-row .who { font-weight: 700; min-width: 90px; }
+  .match-row .arrow { color: var(--muted); }
+  .match-row .gift { color: var(--good); font-weight: 700; }
+  .match-row .num { color: var(--muted); font-size: 12px; margin-left:auto; }
+  @keyframes pop { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+
+  .empty { color: var(--muted); text-align:center; font-size: 14px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .chip {
+    background:#141934; border:1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px; font-size: 12px; color: var(--muted);
+  }
+  .chip.done { text-decoration: line-through; opacity:.5; }
+
+  canvas#confetti { position: fixed; inset:0; pointer-events:none; z-index: 50; }
+
+  /* ---- dramatic effects ---- */
+  .wheel-box { transition: transform .4s cubic-bezier(.2,.8,.2,1), filter .3s; }
+  .wheel-box.dim { filter: brightness(.4) saturate(.7); }
+  .wheel-box.reveal { transform: scale(1.07); }
+  .pointer { transition: transform .08s; }
+  .pointer.kick { transform: translateX(-50%) translateY(-3px) rotate(-8deg); }
+
+  /* spotlight vignette around the wheel on reveal */
+  #vignette {
+    position:absolute; inset:-40px; pointer-events:none; z-index:3; opacity:0;
+    transition: opacity .4s; border-radius:50%;
+    background: radial-gradient(circle at 50% 50%, transparent 38%, rgba(5,7,20,.82) 72%);
+  }
+  #vignette.on { opacity:1; }
+
+  /* 3·2·1 countdown overlay over the wheel */
+  #countdown {
+    position:absolute; inset:0; z-index:6; display:none;
+    align-items:center; justify-content:center; pointer-events:none;
+    font-size:120px; font-weight:900; color:#fff;
+    text-shadow:0 0 24px var(--accent), 0 0 60px var(--accent-2);
+  }
+  @keyframes cd { 0%{ transform:scale(.3); opacity:0; } 25%{ transform:scale(1.1); opacity:1; } 75%{ transform:scale(1); opacity:1; } 100%{ transform:scale(1.6); opacity:0; } }
+
+  /* full-screen white flash on win */
+  #flash { position:fixed; inset:0; z-index:60; pointer-events:none; background:#fff; opacity:0; }
+  @keyframes flash { 0%{ opacity:.85; } 100%{ opacity:0; } }
+
+  /* winner name pop */
+  .result-banner .big { animation: namepop .55s cubic-bezier(.2,1.4,.3,1); }
+  @keyframes namepop {
+    0%{ transform:scale(.5); opacity:0; filter:blur(6px); }
+    60%{ transform:scale(1.18); opacity:1; filter:blur(0); }
+    100%{ transform:scale(1); }
+  }
+
+  /* mute toggle */
+  #muteBtn {
+    position:fixed; top:14px; right:14px; z-index:70;
+    width:44px; height:44px; border-radius:50%; cursor:pointer;
+    border:1px solid var(--border); background:#1a1f3c; color:var(--text);
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.4);
+  }
+  #muteBtn:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<button id="muteBtn" title="소리 켜기/끄기">🔊</button>
+<header>
+  <h1>🎁 오늘부터 캔바</h1>
+  <p>🎉 오늘의 행운의 주인공은 누구?</p>
+</header>
+
+<div class="wrap">
+  <!-- 입력 패널 -->
+  <section class="card">
+    <h2>참가자 &amp; 경품</h2>
+    <label>👤 참가자</label>
+    <textarea id="people" placeholder="홍길동&#10;김영희&#10;이철수"></textarea>
+    <label>🎁 경품</label>
+    <textarea id="prizes" placeholder="치킨 기프티콘&#10;스타벅스 쿠폰&#10;다음 기회에"></textarea>
+
+    <h2 style="margin-top:18px;">추첨 방식</h2>
+    <div class="modes">
+      <button class="mode-btn active" data-mode="single">🎯 한 명씩 추첨</button>
+      <button class="mode-btn" data-mode="match">🔗 한 번에 매칭</button>
+    </div>
+
+    <div id="targetWrap">
+      <label>무엇을 추첨할까요?</label>
+      <div class="target">
+        <button class="active" data-target="people">👤 당첨자 뽑기</button>
+        <button data-target="prizes">🎁 경품 뽑기</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="spinBtn">🎰 추첨 시작!</button>
+      <button class="btn ghost" id="resetBtn">↺ 다시</button>
+    </div>
+    <div class="chips" id="poolChips"></div>
+  </section>
+
+  <!-- 결과 패널 -->
+  <section class="card">
+    <h2>추첨 결과</h2>
+    <div class="stage">
+      <div id="wheelStage" class="wheel-box">
+        <div id="vignette"></div>
+        <div class="pointer"></div>
+        <canvas id="wheel" width="420" height="420"></canvas>
+        <div class="center-cap">🎁</div>
+        <div id="countdown"></div>
+      </div>
+      <div class="result-banner" id="banner">
+        <div class="small">두구두구… 추첨을 시작하세요!</div>
+      </div>
+      <div class="results-list" id="resultsList"></div>
+    </div>
+  </section>
+</div>
+
+<canvas id="confetti"></canvas>
+<div id="flash"></div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const peopleEl = $('#people');
+  const prizesEl = $('#prizes');
+  const spinBtn = $('#spinBtn');
+  const resetBtn = $('#resetBtn');
+  const banner = $('#banner');
+  const resultsList = $('#resultsList');
+  const targetWrap = $('#targetWrap');
+  const poolChips = $('#poolChips');
+  const wheelStage = $('#wheelStage');
+  const pointerEl = $('.pointer');
+  const vignette = $('#vignette');
+  const countdownEl = $('#countdown');
+  const flashEl = $('#flash');
+  const muteBtn = $('#muteBtn');
+
+  const canvas = $('#wheel');
+  const ctx = canvas.getContext('2d');
+  const SIZE = 420;
+  const R = SIZE / 2;
+
+  let mode = 'single';        // 'single' | 'match'
+  let target = 'people';      // for single mode
+  let drawn = [];             // original-line indices already drawn (single mode)
+  let angle = 0;              // current wheel rotation (radians)
+  let spinning = false;
+  let order = [];             // shuffled display order (permutation of current wheel list indices)
+  const LOSE_LABEL = '다음 기회에';   // label used to pad when prizes < people (꽝 대체)
+
+  const PALETTE =['#ff5d8f','#6c5ce7','#38d39f','#ffd36e','#4dabf7','#ff922b','#cc5de8','#22b8cf','#82c91e','#f06595'];
+
+  function lines(el) {
+    return el.value.split('\n').map(s => s.trim()).filter(Boolean);
+  }
+  function allItems() {
+    return lines(target === 'people' ? peopleEl : prizesEl);
+  }
+  // source list shown on the wheel (people in match mode, active target in single)
+  function wheelSource() {
+    return mode === 'match' ? lines(peopleEl) : allItems();
+  }
+  // (re)shuffle the wheel display order — called when the list changes
+  function rebuildOrder() {
+    order = shuffle([...Array(wheelSource().length).keys()]);
+  }
+  // map original index -> display rank using the shuffled order
+  function orderRank(n) {
+    const seq = (order.length === n) ? order : [...Array(n).keys()];
+    const rank = new Array(n);
+    seq.forEach((origIdx, r) => { rank[origIdx] = r; });
+    return rank;
+  }
+  // active pool as {label, idx} in shuffled order; 동명이인 stay distinct via idx
+  function activePool() {
+    const all = allItems();
+    const rank = orderRank(all.length);
+    return all
+      .map((label, idx) => ({ label, idx }))
+      .filter(o => !drawn.includes(o.idx))
+      .sort((a, b) => rank[a.idx] - rank[b.idx]);
+  }
+  // people labels in shuffled order (match-mode wheel preview)
+  function orderedPeople() {
+    const all = lines(peopleEl);
+    const rank = orderRank(all.length);
+    return all.map((label, idx) => ({ label, idx }))
+      .sort((a, b) => rank[a.idx] - rank[b.idx])
+      .map(o => o.label);
+  }
+
+  // ---------- Wheel drawing ----------
+  // hi (optional): index of the winning slice — spotlight it, dim the rest
+  function drawWheel(items, rot, hi) {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    const n = items.length;
+    ctx.save();
+    ctx.translate(R, R);
+    ctx.rotate(rot);
+
+    if (n === 0) {
+      ctx.restore();
+      ctx.fillStyle = '#11152e';
+      ctx.beginPath(); ctx.arc(R, R, R - 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#9aa3cf';
+      ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('항목을 입력하세요', R, R);
+      return;
+    }
+
+    const slice = (Math.PI * 2) / n;
+    for (let i = 0; i < n; i++) {
+      const start = i * slice;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, R - 4, start, start + slice);
+      ctx.closePath();
+      const dim = (hi != null && i !== hi);
+      ctx.globalAlpha = dim ? 0.22 : 1;
+      ctx.fillStyle = PALETTE[i % PALETTE.length];
+      ctx.fill();
+      if (hi != null && i === hi) {
+        ctx.shadowColor = '#fff'; ctx.shadowBlur = 30; ctx.fill(); ctx.shadowBlur = 0;
+      }
+      ctx.strokeStyle = (hi != null && i === hi) ? '#fff' : 'rgba(0,0,0,.25)';
+      ctx.lineWidth = (hi != null && i === hi) ? 3 : 1; ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // label
+      ctx.save();
+      ctx.globalAlpha = dim ? 0.3 : 1;
+      ctx.rotate(start + slice / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#1a1230';
+      const fs = Math.max(11, Math.min(20, 220 / Math.max(6, n)));
+      ctx.font = `700 ${fs}px sans-serif`;
+      let label = items[i];
+      if (label.length > 10) label = label.slice(0, 9) + '…';
+      ctx.fillText(label, R - 24, fs / 3);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // pointer is at top (-90deg). Which slice is under it for given rotation?
+  function winnerIndex(items, rot) {
+    const n = items.length;
+    const slice = (Math.PI * 2) / n;
+    // top pointer angle in wheel space
+    let a = (-Math.PI / 2 - rot) % (Math.PI * 2);
+    if (a < 0) a += Math.PI * 2;
+    return Math.floor(a / slice) % n;
+  }
+
+  // ---------- UI sync ----------
+  function renderChips() {
+    if (mode !== 'single') { poolChips.innerHTML = ''; return; }
+    poolChips.innerHTML = allItems().map((x, i) =>
+      `<span class="chip ${drawn.includes(i) ? 'done' : ''}">${escapeHtml(x)}</span>`
+    ).join('');
+  }
+  function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+  function refresh() {
+    if (mode === 'single') {
+      targetWrap.style.display = '';
+      wheelStage.style.display = '';
+      drawWheel(activePool().map(o => o.label), angle);
+    } else {
+      targetWrap.style.display = 'none';
+      wheelStage.style.display = '';
+      drawWheel(orderedPeople(), angle); // show people on wheel (shuffled order)
+    }
+    renderChips();
+  }
+
+  // ---------- Spin (single mode) ----------
+  function spinSingle() {
+    const pool = activePool();
+    const items = pool.map(o => o.label);
+    if (items.length === 0) { spinning = false; spinBtn.disabled = false; flash('🎉 모든 추첨이 끝났어요!'); return; }
+    if (items.length === 1) { finishSingle(pool, 0); return; }
+
+    spinning = true; spinBtn.disabled = true;
+    const winIdx = Math.floor(Math.random() * items.length);
+    const slice = (Math.PI * 2) / items.length;
+    const targetCenter = winIdx * slice + slice / 2;
+    const desired = -Math.PI / 2 - targetCenter; // rot so that center under pointer
+    const turns = 5 + Math.floor(Math.random() * 3);
+    const finalAngle = desired - turns * Math.PI * 2; // spin backwards (visual)
+    const startAngle = angle % (Math.PI * 2);
+    const total = finalAngle - startAngle - Math.PI * 4; // ensure enough spin
+    const dir = total < 0 ? -1 : 1;
+    const overshoot = Math.min(slice * 0.55, 0.8); // late near-miss, in radians
+    const dur = 4900;
+    const t0 = performance.now();
+    let lastSlice = -1;
+    startDrone();
+
+    function frame(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      // dramatic decel + near-miss bump that settles back to exactly `total` at p=1
+      angle = startAngle + total * easeOutQuart(p) + dir * overshoot * nearMissBump(p);
+      drawWheel(items, angle);
+      const si = winnerIndex(items, angle);
+      if (si !== lastSlice) { lastSlice = si; playTick(p); kickPointer(); }
+      if (p < 1) requestAnimationFrame(frame);
+      else { stopDrone(); finishSingle(pool, winnerIndex(items, angle)); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function finishSingle(pool, idx) {
+    const items = pool.map(o => o.label);
+    const winner = pool[idx].label;
+    const kind = target === 'people' ? '🎉 축하합니다! 당첨자' : '🎁 당첨 경품';
+
+    // reveal sequence: spotlight + flash + name pop + fanfare + confetti
+    drawWheel(items, angle, idx);
+    wheelStage.classList.add('reveal');
+    vignette.classList.add('on');
+    flashScreen();
+    banner.innerHTML = `<div class="small">${kind}</div><div class="big">${escapeHtml(winner)}</div>`;
+    playFanfare();
+    if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
+    confettiBurst();
+
+    // commit after holding the spotlight for a beat
+    setTimeout(() => {
+      drawn.push(pool[idx].idx);
+      addResultRow(winner);
+      spinning = false; spinBtn.disabled = false;
+      clearReveal();
+      refresh();
+    }, 1400);
+  }
+
+  function addResultRow(winner) {
+    if (!resultsList.dataset.init) {
+      resultsList.innerHTML = '<h3>🏆 당첨자 명단</h3>';
+      resultsList.dataset.init = '1';
+    }
+    const n = resultsList.querySelectorAll('.match-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'match-row';
+    row.innerHTML = `<span class="who">#${n}</span><span class="gift">${escapeHtml(winner)}</span>`;
+    // newest winner first: insert right after the heading
+    resultsList.querySelector('h3').insertAdjacentElement('afterend', row);
+  }
+
+  // ---------- Match mode ----------
+  function spinMatch() {
+    const ppl = lines(peopleEl);
+    const prz = lines(prizesEl);
+    if (ppl.length === 0 || prz.length === 0) { spinning = false; spinBtn.disabled = false; flash('참가자와 경품을 입력해 주세요'); return; }
+
+    spinning = true; spinBtn.disabled = true;
+    const shown = orderedPeople();
+    const t0 = performance.now();
+    const dur = 2800;
+    const startAngle = angle;
+    const total = -(6 * Math.PI * 2);
+    let lastSlice = -1;
+    startDrone();
+    function frame(now){
+      const p = Math.min(1,(now-t0)/dur);
+      angle = startAngle + total * easeOutQuart(p);
+      drawWheel(shown, angle);
+      const si = winnerIndex(shown, angle);
+      if (si !== lastSlice) { lastSlice = si; playTick(p); kickPointer(); }
+      if (p<1) requestAnimationFrame(frame);
+      else { stopDrone(); revealMatch(ppl, prz); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function shuffle(a){const x=a.slice();for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
+
+  // ---------- audio (WebAudio, synthesized — no files) ----------
+  let audioCtx = null, muted = false, drone = null;
+  function ensureAudio(){
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return; } }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function blip(freq, dur, type, vol, when){
+    if (!audioCtx || muted) return;
+    const t = audioCtx.currentTime + (when || 0);
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol || 0.2, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function playTick(p){ blip(1050 + (p || 0) * 350, 0.03, 'square', 0.1); }
+  function playCountBeep(go){ blip(go ? 880 : 440, go ? 0.28 : 0.12, go ? 'triangle' : 'sine', 0.25); }
+  function playFanfare(){
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => blip(f, 0.32, 'triangle', 0.2, i * 0.12));
+  }
+  function startDrone(){
+    if (!audioCtx || muted) return;
+    stopDrone();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), lp = audioCtx.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.value = 58;
+    lp.type = 'lowpass'; lp.frequency.value = 180;
+    o.connect(lp); lp.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.4);
+    o.start();
+    drone = { o, g };
+  }
+  function stopDrone(){
+    if (!drone || !audioCtx) { drone = null; return; }
+    const t = audioCtx.currentTime;
+    try {
+      drone.g.gain.cancelScheduledValues(t);
+      drone.g.gain.setValueAtTime(drone.g.gain.value, t);
+      drone.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      drone.o.stop(t + 0.25);
+    } catch(e){}
+    drone = null;
+  }
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+    if (muted) stopDrone();
+  });
+
+  // ---------- reveal / countdown effects ----------
+  function clearReveal(){ wheelStage.classList.remove('reveal'); vignette.classList.remove('on'); }
+  function flashScreen(){ flashEl.style.animation = 'none'; void flashEl.offsetWidth; flashEl.style.animation = 'flash .5s ease'; }
+  function kickPointer(){ pointerEl.classList.add('kick'); setTimeout(() => pointerEl.classList.remove('kick'), 90); }
+  function countdown(cb){
+    const steps = ['3', '2', '1', '🎉'];
+    wheelStage.classList.add('dim');
+    countdownEl.style.display = 'flex';
+    let i = 0;
+    (function step(){
+      if (i < steps.length){
+        countdownEl.textContent = steps[i];
+        countdownEl.style.animation = 'none'; void countdownEl.offsetWidth; countdownEl.style.animation = 'cd .5s ease';
+        playCountBeep(i === steps.length - 1);
+        i++; setTimeout(step, 470);
+      } else {
+        countdownEl.style.display = 'none';
+        wheelStage.classList.remove('dim');
+        cb();
+      }
+    })();
+  }
+  // easing: dramatic deceleration + late near-miss overshoot that settles back exactly on target
+  function easeOutQuart(p){ return 1 - Math.pow(1 - p, 4); }
+  function nearMissBump(p){ if (p < 0.7) return 0; const q = (p - 0.7) / 0.3; return Math.sin(Math.PI * q); }
+
+  function revealMatch(ppl, prz) {
+    spinning = false; spinBtn.disabled = false;
+    // assign each person a prize. If fewer prizes, pad with the lose label
+    let pool = shuffle(prz);
+    while (pool.length < ppl.length) pool.push(LOSE_LABEL);
+    pool = shuffle(pool).slice(0, ppl.length);
+
+    // pair people with prizes, then list actual winners (got a prize) first
+    const pairs = ppl.map((person, i) => ({ person, gift: pool[i] }));
+    pairs.sort((a, b) => (a.gift === LOSE_LABEL ? 1 : 0) - (b.gift === LOSE_LABEL ? 1 : 0));
+    const winnerCount = pairs.filter(p => p.gift !== LOSE_LABEL).length;
+
+    flashScreen();
+    playFanfare();
+    if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
+    banner.innerHTML = `<div class="small">🎉 추첨 완료</div><div class="big">${winnerCount}명 당첨!</div>`;
+    resultsList.innerHTML = '<h3>🏆 당첨 결과</h3>';
+    resultsList.dataset.init = '1';
+    pairs.forEach(({ person, gift }, i) => {
+      const row = document.createElement('div');
+      row.className = 'match-row';
+      row.style.animationDelay = (i * 0.08) + 's';
+      row.innerHTML =
+        `<span class="who">${escapeHtml(person)}</span>` +
+        `<span class="arrow">→</span>` +
+        `<span class="gift">${escapeHtml(gift)}</span>` +
+        `<span class="num">#${i+1}</span>`;
+      resultsList.appendChild(row);
+    });
+    confettiBurst();
+  }
+
+  // ---------- helpers ----------
+  function flash(msg){
+    banner.innerHTML = `<div class="small">${escapeHtml(msg)}</div>`;
+  }
+  function clearResults(){
+    resultsList.innerHTML = '';
+    delete resultsList.dataset.init;
+  }
+
+  // ---------- events ----------
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      if (spinning) return;
+      mode = b.dataset.mode;
+      drawn = []; angle = 0; clearResults(); clearReveal(); rebuildOrder();
+      spinBtn.textContent = mode === 'single' ? '🎰 추첨 시작!' : '🎰 한 번에 매칭';
+      banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
+      refresh();
+    });
+  });
+
+  document.querySelectorAll('.target button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.target button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      if (spinning) return;
+      target = b.dataset.target;
+      drawn = []; angle = 0; clearResults(); clearReveal(); rebuildOrder();
+      banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
+      refresh();
+    });
+  });
+
+  spinBtn.addEventListener('click', () => {
+    if (spinning) return;
+    ensureAudio();
+    // validate before the countdown so we don't build suspense for nothing
+    if (mode === 'single') {
+      if (activePool().length === 0) { flash('🎉 모든 추첨이 끝났어요!'); return; }
+    } else {
+      if (lines(peopleEl).length === 0 || lines(prizesEl).length === 0) { flash('참가자와 경품을 입력해 주세요'); return; }
+    }
+    spinning = true; spinBtn.disabled = true;
+    clearReveal();
+    countdown(() => { if (mode === 'single') spinSingle(); else spinMatch(); });
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (spinning) return;
+    drawn = []; angle = 0; clearResults(); clearReveal(); stopDrone();
+    banner.innerHTML = '<div class="small">두구두구… 추첨을 시작하세요!</div>';
+    refresh();
+  });
+
+  [peopleEl, prizesEl].forEach(el => el.addEventListener('input', () => {
+    // editing the active list shifts line indices → reset draw progress to stay aligned
+    const activeEl = target === 'people' ? peopleEl : prizesEl;
+    if (mode === 'single' && el === activeEl && drawn.length) { drawn = []; clearResults(); }
+    // reshuffle the wheel order when a name is added/removed (not on every keystroke)
+    if (wheelSource().length !== order.length) rebuildOrder();
+    refresh();
+  }));
+
+  // ---------- confetti ----------
+  const cc = $('#confetti');
+  const cctx = cc.getContext('2d');
+  let parts = [];
+  function sizeCC(){ cc.width = innerWidth; cc.height = innerHeight; }
+  sizeCC(); addEventListener('resize', sizeCC);
+  function confettiBurst(){
+    // two side cannons firing inward + upward
+    const cannon = (sx, sy, dirx) => {
+      for (let i=0;i<70;i++){
+        const gold = i % 4 === 0;
+        parts.push({
+          x: sx, y: sy,
+          vx: dirx*(4+Math.random()*7), vy: -(11+Math.random()*9),
+          g: gold ? 0.18 : 0.32, c: gold ? '#ffd36e' : PALETTE[i%PALETTE.length],
+          r: 4+Math.random()*5, life: gold ? 150 : 80+Math.random()*40,
+          rot: Math.random()*6, alpha: 1, fade: gold
+        });
+      }
+    };
+    cannon(innerWidth*0.18, innerHeight, 1);
+    cannon(innerWidth*0.82, innerHeight, -1);
+    // a small center burst
+    for (let i=0;i<30;i++){
+      parts.push({
+        x: innerWidth/2, y: innerHeight/3,
+        vx:(Math.random()-0.5)*11, vy:(Math.random()-1)*10-3,
+        g:0.3, c: PALETTE[i%PALETTE.length], r: 4+Math.random()*5,
+        life: 80+Math.random()*40, rot: Math.random()*6, alpha: 1
+      });
+    }
+    if (!confettiBurst.running){ confettiBurst.running = true; requestAnimationFrame(tick); }
+  }
+  function tick(){
+    cctx.clearRect(0,0,cc.width,cc.height);
+    parts.forEach(p => {
+      p.vy += p.g; p.x += p.vx; p.y += p.vy; p.life--; p.rot += 0.2;
+      if (p.fade) p.alpha = Math.max(0, p.life/90);
+      cctx.save(); cctx.globalAlpha = p.alpha == null ? 1 : p.alpha;
+      cctx.translate(p.x,p.y); cctx.rotate(p.rot);
+      cctx.fillStyle = p.c; cctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.6); cctx.restore();
+    });
+    parts = parts.filter(p => p.life>0 && p.y < cc.height+40);
+    if (parts.length) requestAnimationFrame(tick);
+    else { cctx.clearRect(0,0,cc.width,cc.height); confettiBurst.running=false; }
+  }
+
+  // init demo
+  peopleEl.value = '홍길동\n김영희\n이철수\n박민수';
+  prizesEl.value = '치킨 기프티콘\n스타벅스 쿠폰\n영화 예매권\n다음 기회에';
+  rebuildOrder();
+  refresh();
+})();
+</script>
+</body>
+</html>
