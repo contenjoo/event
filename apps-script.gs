@@ -11,33 +11,36 @@
  * 5. 배포 후 나오는 웹 앱 URL을 복사해서
  *    scratch.html 의 SHEET_ENDPOINT 상수에 붙여넣기
  *
- * 시트 열 구성: 접수시각 | 이름 | 학교 | 이메일 | 당첨 경품 | 미리받기 | 중복여부
+ * 시트 열 구성: 접수시각 | 이름 | 학교 | 이메일 | 당첨 경품 | 미리받기
+ *
+ * 중복 참여 차단: 같은 이메일이 이미 있으면 저장하지 않고 { ok:false, dup:true } 반환.
  */
 
 var SHEET_NAME = '응모';
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  lock.waitLock(10000); // 동시 제출 시 행 겹침 방지
+  lock.waitLock(10000); // 동시 제출 시 행 겹침·중복 통과 방지
 
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_NAME);
-      sheet.appendRow(['접수시각', '이름', '학교', '이메일', '당첨 경품', '미리받기', '중복여부']);
+      sheet.appendRow(['접수시각', '이름', '학교', '이메일', '당첨 경품', '미리받기']);
       sheet.setFrozenRows(1);
     }
 
     var p = (e && e.parameter) || {};
     var email = String(p.email || '').trim().toLowerCase();
 
-    // 같은 이메일 재응모 여부 표시 (저장은 하되 표시만 — 운영자가 판단)
-    var dup = '';
+    // 같은 이메일 재응모 차단 — 이미 있으면 저장 없이 거부
     if (email && sheet.getLastRow() > 1) {
       var emails = sheet.getRange(2, 4, sheet.getLastRow() - 1, 1).getValues();
       for (var i = 0; i < emails.length; i++) {
-        if (String(emails[i][0]).trim().toLowerCase() === email) { dup = '중복'; break; }
+        if (String(emails[i][0]).trim().toLowerCase() === email) {
+          return json({ ok: false, dup: true });
+        }
       }
     }
 
@@ -48,15 +51,18 @@ function doPost(e) {
       email,
       String(p.prize || '').trim(),
       String(p.early || '').trim(),
-      dup,
     ]);
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return json({ ok: true });
   } finally {
     lock.releaseLock();
   }
+}
+
+function json(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // 배포 확인용: 웹 앱 URL을 브라우저로 열면 "OK" 표시

@@ -532,12 +532,19 @@
     btn.disabled = true; btn.textContent = '전송 중…';
     try {
       if (SHEET_ENDPOINT) {
-        // 단순 요청(form-urlencoded)이라 Apps Script가 CORS 허용 — 실패(권한 설정 오류 등) 감지 가능
+        // 단순 요청(form-urlencoded)이라 Apps Script가 CORS 허용 — 응답 JSON 읽어 중복 판정
         const res = await fetch(SHEET_ENDPOINT, {
           method: 'POST',
           body: new URLSearchParams({ name, school, email, prize: state.prize.full, early: early ? '미리받기' : '' }),
         });
         if (!res.ok) throw new Error('submit failed: ' + res.status);
+        const data = await res.json().catch(() => ({ ok: true })); // 응답 못 읽으면 성공으로 간주(관대)
+        if (data && data.dup) {
+          btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
+          $('#eEmail').textContent = '이미 참여한 이메일이에요 — 한 이메일당 1회만 참여할 수 있어요.';
+          $('#fEmail').focus();
+          return;
+        }
       } else {
         console.warn('SHEET_ENDPOINT 미설정 — 응모 데이터가 저장되지 않았습니다', { name, school, email, prize: state.prize.full, early });
       }
