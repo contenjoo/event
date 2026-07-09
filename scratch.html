@@ -335,10 +335,11 @@
   ];
 
   // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
+  // 현재: 30일 72% / 60일 20% / 90일 8%
   const PERIODS = [
-    { type: 'period', days: 30, emoji: '🥉', weight: 50 },
-    { type: 'period', days: 60, emoji: '🥈', weight: 30 },
-    { type: 'period', days: 90, emoji: '🥇', weight: 18 },
+    { type: 'period', days: 30, emoji: '🥉', weight: 72 },
+    { type: 'period', days: 60, emoji: '🥈', weight: 20 },
+    { type: 'period', days: 90, emoji: '🥇', weight: 8 },
   ];
 
   // 특별상 — 기간 당첨에 "추가로" 붙는 보너스 (독립 확률).
