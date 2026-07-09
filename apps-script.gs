@@ -17,6 +17,7 @@
  */
 
 var SHEET_NAME = '응모';
+var VERSION = 'dedup-v2'; // 배포 확인용 — GET 하면 이 값이 보임
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
@@ -65,9 +66,9 @@ function json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// 배포 확인용: 웹 앱 URL을 브라우저로 열면 "OK" 표시
+// 배포 확인용: 웹 앱 URL을 브라우저로 열면 현재 배포 버전이 보임
 function doGet() {
-  return ContentService.createTextOutput('OK — 에듀테크 응모 엔드포인트 동작 중');
+  return ContentService.createTextOutput('OK — 응모 엔드포인트 동작 중 (' + VERSION + ')');
 }
 
 // 편집기 테스트용: doPost를 직접 실행하지 말고 이 함수를 ▶ 실행하세요.
