@@ -336,9 +336,17 @@
 
   // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
   const PERIODS = [
-    { days: 30, emoji: '🥉', weight: 5 },  // 50%
-    { days: 60, emoji: '🥈', weight: 3 },  // 30%
-    { days: 90, emoji: '🥇', weight: 2 },  // 20%
+    { type: 'period', days: 30, emoji: '🥉', weight: 50 },
+    { type: 'period', days: 60, emoji: '🥈', weight: 30 },
+    { type: 'period', days: 90, emoji: '🥇', weight: 18 },
+  ];
+
+  // 특별상 — 기간 대신 당첨될 수 있는 희귀 경품.
+  //  · 주이즈: 어떤 툴을 골랐든 항상 후보 (모든 참가자에게 특별상)
+  //  · Snorkl 과제 +10: Snorkl을 선택했을 때만 후보
+  const SPECIALS = [
+    { type: 'special', emoji: '👑', short: '주이즈 1년', full: '주이즈 1년 이용권',        weight: 2, always: true },
+    { type: 'special', emoji: '✏️', short: '과제 +10',  full: 'Snorkl 과제 10개 추가',     weight: 4, requiresTool: 'Snorkl' },
   ];
 
   // 복권 채우기용 중립(행운) 심볼 — 당첨과 무관, 니어미스 재미용
@@ -346,7 +354,7 @@
   // ==========================================
 
   const $ = (s) => document.querySelector(s);
-  const state = { tools: [], period: null, submitted: false };
+  const state = { tools: [], win: null, submitted: false };
 
   function show(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('on'));
@@ -401,21 +409,27 @@
 
   $('#repick').addEventListener('click', () => { stopHeartbeat(); show('#stepTools'); });
 
-  // odds teaser
-  const oddsEl = $('#odds');
-  PERIODS.forEach(p => {
-    const total = PERIODS.reduce((s, x) => s + x.weight, 0);
-    const c = document.createElement('span');
-    c.className = 'chip';
-    c.textContent = `${p.emoji} ${p.days}일 ${Math.round(p.weight / total * 100)}%`;
-    oddsEl.appendChild(c);
-  });
+  // 현재 선택에 맞는 추첨 풀: 기간 3종 + 조건 맞는 특별상
+  function buildPool() {
+    const specials = SPECIALS.filter(s => s.always || state.tools.includes(s.requiresTool));
+    return PERIODS.concat(specials);
+  }
+  function outcomeLabel(o) { return o.type === 'period' ? `${o.days}일` : o.short; }
 
-  function drawPeriod() {
-    const total = PERIODS.reduce((s, p) => s + p.weight, 0);
+  function drawOutcome(pool) {
+    const total = pool.reduce((s, p) => s + p.weight, 0);
     let r = Math.random() * total;
-    for (const p of PERIODS) { r -= p.weight; if (r < 0) return p; }
-    return PERIODS[0];
+    for (const p of pool) { r -= p.weight; if (r < 0) return p; }
+    return pool[0];
+  }
+
+  // odds teaser — 현재 풀 기준 실제 확률
+  function renderOdds(pool) {
+    const oddsEl = $('#odds');
+    const total = pool.reduce((s, p) => s + p.weight, 0);
+    oddsEl.innerHTML = pool.map(p =>
+      `<span class="chip">${p.emoji} ${p.type === 'period' ? p.days + '일' : p.short} ${Math.round(p.weight / total * 100)}%</span>`
+    ).join('');
   }
 
   // ---------- step 2: match-3 scratch ----------
@@ -428,27 +442,29 @@
 
   function buildTicket() {
     won = false;
-    state.period = drawPeriod();
+    const pool = buildPool();
+    renderOdds(pool);
+    state.win = drawOutcome(pool);
     stopHeartbeat();
     ticket.classList.remove('suspense', 'revealed');
     claimBtn.style.display = 'none';
     setStatus('🪙 은박을 긁어서 같은 그림 3개를 찾아보세요!');
 
-    // winning period ×3, the other two periods ×2 (decoy periods),
-    // plus neutral lucky symbols — only the winning period can reach 3.
-    const winSym = { key: state.period.emoji, label: `${state.period.days}일` };
-    const otherPeriods = PERIODS.filter(p => p !== state.period)
-      .map(p => ({ key: p.emoji, label: `${p.days}일` }));
-    const decoys = shuffleArr(DECOYS).slice(0, 3)
-      .map(e => ({ key: e, label: '행운' }));
+    // 당첨 심볼 ×3, 나머지는 못 뽑힌 후보(기간·특별상) ×2 + 중립 심볼로 채움.
+    // 당첨 심볼만 3개에 도달 (나머지는 최대 2개).
+    const winSym = { key: state.win.emoji, label: outcomeLabel(state.win) };
+    const otherOutcomes = shuffleArr(pool.filter(o => o !== state.win))
+      .map(o => ({ key: o.emoji, label: outcomeLabel(o) }));
+    const neutrals = shuffleArr(DECOYS).map(e => ({ key: e, label: '행운' }));
+    const decoys = otherOutcomes.concat(neutrals).slice(0, 5); // 5종, 서로 다른 심볼
 
     const layout = shuffleArr([
       winSym, winSym, winSym,
-      otherPeriods[0], otherPeriods[0],
-      otherPeriods[1], otherPeriods[1],
       decoys[0], decoys[0],
       decoys[1], decoys[1],
-      decoys[2],
+      decoys[2], decoys[2],
+      decoys[3], decoys[3],
+      decoys[4],
     ]);
 
     cellsEl.innerHTML = '';
@@ -536,7 +552,7 @@
     const counts = {};
     cells.filter(c => c.opened).forEach(c => { counts[c.key] = (counts[c.key] || 0) + 1; });
 
-    if (cell.key === state.period.emoji && counts[state.period.emoji] === 3) { winReveal(); return; }
+    if (cell.key === state.win.emoji && counts[state.win.emoji] === 3) { winReveal(); return; }
 
     const best = Math.max(...Object.values(counts));
     if (best === 2) {
@@ -559,15 +575,19 @@
     setTimeout(() => {
       cells.forEach(c => {
         if (!c.opened) { c.opened = true; c.el.classList.add('open'); }
-        c.el.classList.add(c.key === state.period.emoji ? 'winhit' : 'dimmed');
+        c.el.classList.add(c.key === state.win.emoji ? 'winhit' : 'dimmed');
       });
       ticket.classList.add('revealed');
       flashScreen();
       playFanfare();
       confettiBurst();
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
-      setStatus(`🎉 ${state.period.emoji} ${state.period.days}일 무료 체험 당첨!`, true);
-      claimBtn.textContent = `🎁 ${state.period.days}일 체험권 받기`;
+      const w = state.win;
+      const winMsg = w.type === 'period'
+        ? `🎉 ${w.emoji} ${w.days}일 무료 체험 당첨!`
+        : `🎉 ${w.emoji} 특별상 ${w.full} 당첨!`;
+      setStatus(winMsg, true);
+      claimBtn.textContent = w.type === 'period' ? `🎁 ${w.days}일 체험권 받기` : `🎁 ${w.short} 받기`;
       claimBtn.style.display = '';
     }, 1000);
   }
@@ -581,9 +601,11 @@
     if ($('#stepScratch').classList.contains('on')) cells.filter(c => !c.opened).forEach(paintCellFoil);
   });
 
-  // 최종 경품 문구: 선택 툴 + 당첨 기간
+  // 최종 경품 문구: 기간 당첨은 "선택 툴 + 기간", 특별상은 그 자체
   function prizeText() {
-    return `${state.tools.join(' · ')} ${state.period.days}일 무료 체험`;
+    const w = state.win;
+    if (w.type === 'special') return w.full;
+    return `${state.tools.join(' · ')} ${w.days}일 무료 체험`;
   }
 
   claimBtn.addEventListener('click', () => {
@@ -629,7 +651,8 @@
           body: new URLSearchParams({
             name, school, email,
             tools: state.tools.join(', '),
-            days: String(state.period.days),
+            days: state.win.type === 'period' ? String(state.win.days) : '',
+            prize: prizeText(),
             early: early ? '미리받기' : '',
           }),
         });
@@ -642,7 +665,7 @@
           return;
         }
       } else {
-        console.warn('SHEET_ENDPOINT 미설정 — 저장 안 됨', { name, school, email, tools: state.tools, days: state.period.days, early });
+        console.warn('SHEET_ENDPOINT 미설정 — 저장 안 됨', { name, school, email, tools: state.tools, prize: prizeText(), early });
       }
       state.submitted = true;
       $('#doneText').innerHTML =
