@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎓 에듀테크 무료 체험권 긁기</title>
+<style>
+  :root {
+    --bg: #0f1226;
+    --panel: #1a1f3c;
+    --panel-2: #232a52;
+    --accent: #ff5d8f;
+    --accent-2: #6c5ce7;
+    --text: #eef1ff;
+    --muted: #9aa3cf;
+    --good: #38d39f;
+    --border: #2e3566;
+    --gold: #ffd36e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: radial-gradient(1200px 600px at 70% -10%, #2a2f63 0%, var(--bg) 55%) fixed;
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header { text-align: center; padding: 30px 16px 6px; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: -0.5px; }
+  header p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px; }
+  .card {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 20px;
+  }
+
+  .step { display: none; animation: fadein .35s ease; }
+  .step.on { display: block; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .step-label { font-size: 12.5px; color: var(--muted); letter-spacing: 1px; margin-bottom: 10px; font-weight: 700; }
+  h2 { margin: 0 0 16px; font-size: 19px; }
+  h2 b { color: var(--gold); }
+
+  /* ---- step 1: tool select ---- */
+  .tool {
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; text-align: left;
+    background: #141934; border: 2px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; cursor: pointer;
+    color: var(--text); font-family: inherit; transition: .15s;
+  }
+  .tool:hover, .tool:focus-visible { border-color: var(--accent-2); transform: translateY(-1px); }
+  .tool:active { transform: translateY(1px); }
+  .tool .logo { font-size: 30px; }
+  .tool .name { font-size: 17px; font-weight: 800; }
+  .tool .desc { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+  .tool .go { margin-left: auto; color: var(--accent); font-size: 18px; }
+
+  /* ---- step 2: scratch ---- */
+  .picked {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #141934; border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 14px; font-size: 13.5px; font-weight: 700; margin-bottom: 16px;
+  }
+  .picked .re { color: var(--muted); font-weight: 500; font-size: 12px; cursor: pointer; text-decoration: underline; }
+
+  .scratch-zone { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .ticket {
+    position: relative; width: 100%; max-width: 400px;
+    border-radius: 16px;
+    border: 3px dashed var(--gold);
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255, 211, 110, .14), transparent 55%),
+      radial-gradient(circle at 80% 85%, rgba(255, 93, 143, .16), transparent 55%),
+      #191d3d;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .ticket-title {
+    text-align: center; font-size: 13px; font-weight: 800; color: var(--gold);
+    padding: 12px 10px 0; letter-spacing: .5px;
+  }
+  .cells {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; padding: 12px 14px 16px;
+  }
+  .cell {
+    position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden;
+    background: #11152e; border: 2px solid var(--border);
+    transition: border-color .3s, box-shadow .3s, filter .4s;
+  }
+  .cell .under {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .cell .under .sym { font-size: 36px; line-height: 1; }
+  .cell .under .mon { font-size: 12.5px; font-weight: 800; color: var(--muted); }
+  .cell canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .cell canvas:active { cursor: grabbing; }
+  .cell.open canvas { transition: opacity .3s ease; opacity: 0; pointer-events: none; }
+  .cell.open .under { animation: cellpop .4s cubic-bezier(.2,1.5,.4,1); }
+  @keyframes cellpop { from { transform: scale(.5); } 60% { transform: scale(1.18); } to { transform: scale(1); } }
+  .cell.winhit { border-color: var(--gold); box-shadow: 0 0 16px rgba(255,211,110,.55); }
+  .cell.winhit .mon { color: var(--gold); }
+  .cell.dimmed { filter: brightness(.4) saturate(.5); }
+
+  /* suspense tremble when one away from winning */
+  .ticket.suspense { animation: tremble .22s linear infinite; }
+  @keyframes tremble {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25% { transform: translate(1px, -1px) rotate(.15deg); }
+    50% { transform: translate(-1px, 1px) rotate(-.15deg); }
+    75% { transform: translate(1px, 1px) rotate(.1deg); }
+  }
+  .ticket.revealed { animation: glowpulse 1.2s ease; }
+  @keyframes glowpulse {
+    0% { box-shadow: 0 0 0 rgba(255,211,110,0); }
+    40% { box-shadow: 0 0 52px rgba(255,211,110,.7); }
+    100% { box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  }
+
+  .match-status {
+    min-height: 24px; text-align: center;
+    font-size: 14.5px; font-weight: 700; color: var(--muted);
+    transition: color .2s;
+  }
+  .match-status.hot {
+    color: var(--gold); font-size: 16.5px;
+    animation: hotpulse .6s ease infinite;
+  }
+  @keyframes hotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+  /* full-screen white flash on win */
+  #flash { position: fixed; inset: 0; z-index: 60; pointer-events: none; background: #fff; opacity: 0; }
+  @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
+
+  /* ---- step 3: form ---- */
+  .prize-summary {
+    display: flex; align-items: center; gap: 10px;
+    background: #141934; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 16px; font-size: 14px;
+  }
+  .prize-summary b { color: var(--gold); }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input {
+    width: 100%; background: #11152e; color: var(--text);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 14px; font-size: 15px; font-family: inherit;
+  }
+  input:focus { outline: none; border-color: var(--accent-2); }
+  .err { color: var(--accent); font-size: 12px; margin-top: 5px; min-height: 15px; }
+
+  .btn {
+    width: 100%; margin-top: 6px; padding: 14px;
+    border-radius: 12px; border: none; cursor: pointer;
+    font-size: 16px; font-weight: 800; color: #fff; font-family: inherit;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    transition: transform .08s, opacity .2s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: #1d2347; border: 1px solid var(--border); }
+  form .btn { margin-top: 18px; }
+  #claimBtn { animation: claimpop .5s cubic-bezier(.2,1.4,.3,1); }
+  @keyframes claimpop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ---- done ---- */
+  .done-box { text-align: center; padding: 18px 0 8px; }
+  .done-box .big-emoji { font-size: 54px; }
+  .done-box h2 { margin: 12px 0 8px; }
+  .done-box p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0; }
+
+  canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 26px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎓 에듀테크 무료 체험권 이벤트</h1>
+  <p>같은 그림 3개를 찾으면 체험권 당첨!</p>
+</header>
+
+<div class="wrap">
+  <div class="card">
+
+    <!-- STEP 1: choose tool -->
+    <section class="step on" id="step1">
+      <div class="step-label">STEP 1 / 3</div>
+      <h2>어떤 에듀테크를 체험해 보고 싶나요?</h2>
+      <div id="toolList"></div>
+    </section>
+
+    <!-- STEP 2: scratch match-3 -->
+    <section class="step" id="step2">
+      <div class="step-label">STEP 2 / 3</div>
+      <h2>같은 그림 <b>3개</b>를 찾으면 당첨!</h2>
+      <div class="picked">
+        <span id="pickedLabel"></span>
+        <span class="re" id="repick">다시 선택</span>
+      </div>
+      <div class="scratch-zone">
+        <div class="ticket" id="ticket">
+          <div class="ticket-title">✨ 행운의 즉석복권 ✨</div>
+          <div class="cells" id="cells"></div>
+        </div>
+        <div class="match-status" id="matchStatus"></div>
+        <button class="btn" id="claimBtn" style="display:none;"></button>
+      </div>
+    </section>
+
+    <!-- STEP 3: form -->
+    <section class="step" id="step3">
+      <div class="step-label">STEP 3 / 3</div>
+      <h2>체험권 받을 정보를 알려주세요</h2>
+      <div class="prize-summary">🎁 <span><b id="summaryText"></b> 체험권이 준비됐어요!</span></div>
+      <form id="entryForm" novalidate>
+        <label for="fName">이름</label>
+        <input id="fName" name="name" autocomplete="name" placeholder="홍길동" required />
+        <div class="err" id="eName"></div>
+        <label for="fSchool">학교</label>
+        <input id="fSchool" name="school" autocomplete="organization" placeholder="○○초등학교" required />
+        <div class="err" id="eSchool"></div>
+        <label for="fEmail">이메일</label>
+        <input id="fEmail" name="email" type="email" autocomplete="email" placeholder="teacher@school.kr" required />
+        <div class="err" id="eEmail"></div>
+        <button class="btn" id="submitBtn" type="submit">✅ 체험권 신청하기</button>
+      </form>
+    </section>
+
+    <!-- DONE -->
+    <section class="step" id="stepDone">
+      <div class="done-box">
+        <div class="big-emoji">📬</div>
+        <h2>신청 완료!</h2>
+        <p id="doneText"></p>
+        <button class="btn ghost" id="againBtn" style="margin-top:22px;">↺ 처음으로 (다음 참가자)</button>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+<div id="flash"></div>
+<footer>🎓 에듀테크 체험 이벤트</footer>
+
+<script>
+(() => {
+  // ================= CONFIG =================
+  // Google Apps Script 웹 앱 URL을 여기에 붙여넣으세요 (설정법: apps-script.gs 참고)
+  const SHEET_ENDPOINT = '';
+
+  const TOOLS = [
+    { id: 'Snorkl',   emoji: '🎤', desc: '학생의 생각을 음성·화이트보드로 녹화하고 AI 피드백까지' },
+    { id: 'Redmenta', emoji: '📝', desc: 'AI로 워크시트·퀴즈를 뚝딱 만드는 스마트 학습지 플랫폼' },
+    { id: 'Mizou',    emoji: '🤖', desc: '우리 반 맞춤 교육용 AI 챗봇을 직접 만드는 플랫폼' },
+  ];
+
+  // 체험 기간 확률 (weight 비율로 추첨) — 필요하면 숫자만 바꾸세요
+  // 현재: 1개월 60% / 2개월 30% / 3개월 10%
+  const PRIZES = [
+    { months: 1, weight: 6 },
+    { months: 2, weight: 3 },
+    { months: 3, weight: 1 },
+  ];
+
+  const SYMBOLS = { 1: '🎈', 2: '🎁', 3: '👑' };
+  // ==========================================
+
+  const $ = (s) => document.querySelector(s);
+  const state = { tool: null, months: null, submitted: false };
+
+  // ---------- step navigation ----------
+  function show(id) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('on'));
+    $(id).classList.add('on');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---------- step 1: tools ----------
+  const toolList = $('#toolList');
+  TOOLS.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tool';
+    b.innerHTML =
+      `<span class="logo">${t.emoji}</span>` +
+      `<span><span class="name">${t.id}</span><div class="desc">${t.desc}</div></span>` +
+      `<span class="go">›</span>`;
+    b.addEventListener('click', () => pickTool(t));
+    toolList.appendChild(b);
+  });
+
+  function pickTool(t) {
+    state.tool = t.id;
+    state.months = drawMonths();
+    $('#pickedLabel').textContent = `${t.emoji} ${t.id} 선택됨`;
+    show('#step2'); // ticket needs layout before the foil can be painted
+    buildTicket();
+  }
+  $('#repick').addEventListener('click', () => { stopHeartbeat(); show('#step1'); });
+
+  function drawMonths() {
+    const total = PRIZES.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total;
+    for (const p of PRIZES) { r -= p.weight; if (r < 0) return p.months; }
+    return PRIZES[0].months;
+  }
+
+  // ---------- step 2: match-3 scratch ticket ----------
+  const ticket = $('#ticket');
+  const cellsEl = $('#cells');
+  const matchStatus = $('#matchStatus');
+  const claimBtn = $('#claimBtn');
+  let cells = [];   // { m, el, canvas, ctx, opened, moves }
+  let won = false;
+
+  function shuffleArr(a) {
+    const x = a.slice();
+    for (let i = x.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [x[i], x[j]] = [x[j], x[i]];
+    }
+    return x;
+  }
+
+  function buildTicket() {
+    won = false;
+    stopHeartbeat();
+    ticket.classList.remove('suspense', 'revealed');
+    claimBtn.style.display = 'none';
+    setStatus('🪙 은박을 긁어서 같은 그림 3개를 찾아보세요!');
+
+    // winning symbol ×3, decoys ×2 and ×1 — only the winner can reach 3
+    const others = shuffleArr([1, 2, 3].filter(m => m !== state.months));
+    const layout = shuffleArr([
+      state.months, state.months, state.months,
+      others[0], others[0], others[1],
+    ]);
+
+    cellsEl.innerHTML = '';
+    cells = layout.map(m => {
+      const el = document.createElement('div');
+      el.className = 'cell';
+      el.innerHTML =
+        `<div class="under"><div class="sym">${SYMBOLS[m]}</div><div class="mon">${m}개월</div></div>` +
+        `<canvas></canvas>`;
+      cellsEl.appendChild(el);
+      const canvas = el.querySelector('canvas');
+      const cell = { m, el, canvas, ctx: canvas.getContext('2d'), opened: false, moves: 0 };
+      attachScratch(cell);
+      return cell;
+    });
+    cells.forEach(paintCellFoil);
+  }
+
+  function paintCellFoil(cell) {
+    const rect = cell.canvas.getBoundingClientRect();
+    if (rect.width < 4) return; // not laid out yet
+    const dpr = window.devicePixelRatio || 1;
+    cell.canvas.width = Math.round(rect.width * dpr);
+    cell.canvas.height = Math.round(rect.height * dpr);
+    const c = cell.ctx;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = rect.width, h = rect.height;
+    const g = c.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, '#b7bdd8'); g.addColorStop(.45, '#e8ebf7');
+    g.addColorStop(.55, '#9aa3c7'); g.addColorStop(1, '#c9cfe6');
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(255,255,255,.55)';
+    for (let i = 0; i < 12; i++) {
+      c.beginPath();
+      c.arc(Math.random() * w, Math.random() * h, Math.random() * 1.4 + .4, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = '#3a4066';
+    c.font = '800 30px sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('?', w / 2, h / 2);
+  }
+
+  function attachScratch(cell) {
+    let scratching = false;
+    const scratchAt = (clientX, clientY) => {
+      if (cell.opened || won) return;
+      const rect = cell.canvas.getBoundingClientRect();
+      const c = cell.ctx;
+      c.globalCompositeOperation = 'destination-out';
+      c.beginPath();
+      c.arc(clientX - rect.left, clientY - rect.top, 15, 0, Math.PI * 2);
+      c.fill();
+      c.globalCompositeOperation = 'source-over';
+      if (++cell.moves % 3 === 0) tickSound();
+      if (cell.moves % 5 === 0) checkCell(cell);
+    };
+    cell.canvas.addEventListener('pointerdown', (e) => {
+      scratching = true; ensureAudio();
+      try { cell.canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      scratchAt(e.clientX, e.clientY);
+    });
+    cell.canvas.addEventListener('pointermove', (e) => { if (scratching) scratchAt(e.clientX, e.clientY); });
+    ['pointerup', 'pointercancel'].forEach(ev =>
+      cell.canvas.addEventListener(ev, () => { scratching = false; checkCell(cell); }));
+  }
+
+  function checkCell(cell) {
+    if (cell.opened || won) return;
+    const { width, height } = cell.canvas;
+    if (!width) return;
+    const data = cell.ctx.getImageData(0, 0, width, height).data;
+    let clear = 0, total = 0;
+    for (let i = 3; i < data.length; i += 4 * 8) { total++; if (data[i] === 0) clear++; }
+    if (clear / total > 0.5) openCell(cell);
+  }
+
+  function openCell(cell) {
+    cell.opened = true;
+    cell.el.classList.add('open');
+    popSound();
+    if ('vibrate' in navigator) navigator.vibrate(20);
+
+    const counts = {};
+    cells.filter(c => c.opened).forEach(c => { counts[c.m] = (counts[c.m] || 0) + 1; });
+
+    if (counts[cell.m] === 3) { winReveal(cell.m); return; }
+
+    // status: whichever symbol currently leads
+    const [bestM, bestN] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    if (bestN === 2) {
+      setStatus(`🔥 ${SYMBOLS[bestM]} ${bestM}개월 ×2!! 같은 그림 하나만 더…!`, true);
+      ticket.classList.add('suspense');
+      startHeartbeat();
+    } else {
+      setStatus(`${SYMBOLS[cell.m]} ${cell.m}개월 발견! 같은 그림 ${3 - counts[cell.m]}개 더 나오면 당첨`);
+    }
+  }
+
+  function winReveal(m) {
+    won = true;
+    stopHeartbeat();
+    ticket.classList.remove('suspense');
+    setStatus('두구두구두구…', true);
+    riserSound();
+
+    setTimeout(() => {
+      // open the whole board, spotlight the winning trio
+      cells.forEach(c => {
+        if (!c.opened) { c.opened = true; c.el.classList.add('open'); }
+        c.el.classList.add(c.m === m ? 'winhit' : 'dimmed');
+      });
+      ticket.classList.add('revealed');
+      flashScreen();
+      playFanfare();
+      confettiBurst();
+      if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
+      setStatus(`🎉 ${SYMBOLS[m]} ${m}개월 무료 체험권 당첨!`, true);
+      claimBtn.textContent = `🎁 ${m}개월 체험권 받기`;
+      claimBtn.style.display = '';
+    }, 1000);
+  }
+
+  function setStatus(text, hot) {
+    matchStatus.textContent = text;
+    matchStatus.classList.toggle('hot', !!hot);
+  }
+
+  window.addEventListener('resize', () => {
+    if ($('#step2').classList.contains('on')) cells.filter(c => !c.opened).forEach(paintCellFoil);
+  });
+
+  claimBtn.addEventListener('click', () => {
+    $('#summaryText').textContent = `${state.tool} ${state.months}개월 무료`;
+    show('#step3');
+    $('#fName').focus();
+  });
+
+  // ---------- step 3: form ----------
+  const form = $('#entryForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (state.submitted) return;
+
+    const name = $('#fName').value.trim();
+    const school = $('#fSchool').value.trim();
+    const email = $('#fEmail').value.trim();
+    let ok = true;
+    $('#eName').textContent = name ? '' : '이름을 입력해 주세요'; ok = ok && !!name;
+    $('#eSchool').textContent = school ? '' : '학교를 입력해 주세요'; ok = ok && !!school;
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    $('#eEmail').textContent = emailOk ? '' : '올바른 이메일을 입력해 주세요'; ok = ok && emailOk;
+    if (!ok) return;
+
+    const btn = $('#submitBtn');
+    btn.disabled = true; btn.textContent = '전송 중…';
+    try {
+      if (SHEET_ENDPOINT) {
+        await fetch(SHEET_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors', // Apps Script는 CORS 헤더가 없어 opaque 응답으로 전송
+          body: new URLSearchParams({ name, school, email, tool: state.tool, months: state.months }),
+        });
+      } else {
+        console.warn('SHEET_ENDPOINT 미설정 — 응모 데이터가 저장되지 않았습니다', { name, school, email, tool: state.tool, months: state.months });
+      }
+      state.submitted = true;
+      $('#doneText').innerHTML =
+        `<b>${escapeHtml(name)}</b> 선생님, <b>${escapeHtml(state.tool)} ${state.months}개월 무료 체험권</b> 신청이 접수됐어요.<br/>` +
+        `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 안내를 보내드릴게요!`;
+      show('#stepDone');
+      confettiBurst();
+    } catch (err) {
+      btn.disabled = false; btn.textContent = '✅ 체험권 신청하기';
+      $('#eEmail').textContent = '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
+      return;
+    }
+    btn.disabled = false; btn.textContent = '✅ 체험권 신청하기';
+  });
+
+  // next participant (event booth friendly)
+  $('#againBtn').addEventListener('click', () => {
+    state.tool = null; state.months = null; state.submitted = false;
+    form.reset();
+    ['#eName', '#eSchool', '#eEmail'].forEach(s => $(s).textContent = '');
+    show('#step1');
+  });
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  // ---------- audio (synthesized) ----------
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function blip(freq, dur, type, vol, when) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime + (when || 0);
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol || 0.15, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function tickSound() { blip(2400 + Math.random() * 800, 0.02, 'square', 0.03); }
+  function popSound() { blip(660, 0.12, 'triangle', 0.18); blip(990, 0.1, 'triangle', 0.12, 0.06); }
+  function riserSound() { for (let i = 0; i < 9; i++) blip(280 + i * 95, 0.08, 'sawtooth', 0.07, i * 0.1); }
+  function playFanfare() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => blip(f, 0.32, 'triangle', 0.2, i * 0.12)); }
+
+  // heartbeat while one match away
+  let hbTimer = null;
+  function startHeartbeat() {
+    if (hbTimer || !audioCtx) return;
+    const thump = () => blip(58, 0.1, 'sine', 0.35);
+    hbTimer = setInterval(() => { thump(); setTimeout(thump, 190); }, 720);
+  }
+  function stopHeartbeat() { if (hbTimer) { clearInterval(hbTimer); hbTimer = null; } }
+
+  function flashScreen() {
+    const f = $('#flash');
+    f.style.animation = 'none'; void f.offsetWidth; f.style.animation = 'flash .5s ease';
+  }
+
+  // ---------- confetti ----------
+  const cc = $('#confetti');
+  const cctx = cc.getContext('2d');
+  const PALETTE = ['#ff5d8f', '#6c5ce7', '#38d39f', '#ffd36e', '#4dabf7', '#ff922b', '#cc5de8'];
+  let parts = [];
+  function sizeCC() { cc.width = innerWidth; cc.height = innerHeight; }
+  sizeCC(); addEventListener('resize', sizeCC);
+  function confettiBurst() {
+    for (let i = 0; i < 120; i++) {
+      const side = i % 2 === 0;
+      parts.push({
+        x: side ? innerWidth * 0.15 : innerWidth * 0.85, y: innerHeight * 0.85,
+        vx: (side ? 1 : -1) * (3 + Math.random() * 7), vy: -(10 + Math.random() * 9),
+        g: 0.3, c: PALETTE[i % PALETTE.length], r: 4 + Math.random() * 5,
+        life: 80 + Math.random() * 50, rot: Math.random() * 6,
+      });
+    }
+    if (!confettiBurst.running) { confettiBurst.running = true; requestAnimationFrame(ctick); }
+  }
+  function ctick() {
+    cctx.clearRect(0, 0, cc.width, cc.height);
+    parts.forEach(p => {
+      p.vy += p.g; p.x += p.vx; p.y += p.vy; p.life--; p.rot += 0.2;
+      cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.rot);
+      cctx.fillStyle = p.c; cctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6); cctx.restore();
+    });
+    parts = parts.filter(p => p.life > 0 && p.y < cc.height + 40);
+    if (parts.length) requestAnimationFrame(ctick);
+    else { cctx.clearRect(0, 0, cc.width, cc.height); confettiBurst.running = false; }
+  }
+})();
+</script>
+</body>
+</html>
