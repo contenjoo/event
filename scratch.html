@@ -49,10 +49,42 @@
   @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
   .step-label { font-size: 12.5px; color: var(--muted); letter-spacing: 1px; margin-bottom: 10px; font-weight: 700; }
-  h2 { margin: 0 0 16px; font-size: 19px; }
+  h2 { margin: 0 0 6px; font-size: 19px; }
   h2 b { color: var(--gold); }
+  .lead { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
+
+  /* ---- step 1: tool multi-select ---- */
+  .tool {
+    display: flex; align-items: center; gap: 13px;
+    width: 100%; text-align: left;
+    background: #141934; border: 2px solid var(--border); border-radius: 14px;
+    padding: 15px; margin-bottom: 11px; cursor: pointer;
+    color: var(--text); font-family: inherit; transition: .15s;
+  }
+  .tool:hover { border-color: var(--accent-2); }
+  .tool:active { transform: translateY(1px); }
+  .tool .logo { font-size: 30px; flex: 0 0 auto; }
+  .tool .name { font-size: 17px; font-weight: 800; }
+  .tool .desc { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+  .tool .tick {
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px;
+    border: 2px solid var(--muted); background: #0d1024;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 900; color: #fff; transition: .15s;
+  }
+  .tool .tick::after { content: '✓'; opacity: 0; transform: scale(.5); transition: .15s; }
+  .tool.sel { border-color: var(--accent); background: rgba(255,93,143,.09); }
+  .tool.sel .tick { border-color: var(--accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .tool.sel .tick::after { opacity: 1; transform: scale(1); }
 
   /* ---- scratch ---- */
+  .picked {
+    display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: #141934; border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 14px; font-size: 13.5px; font-weight: 700; margin-bottom: 16px;
+  }
+  .picked .re { color: var(--muted); font-weight: 500; font-size: 12px; cursor: pointer; text-decoration: underline; }
+
   .scratch-zone { display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .ticket {
     position: relative; width: 100%; max-width: 400px;
@@ -79,14 +111,11 @@
   }
   .cell .under {
     position: absolute; inset: 0;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     padding: 0 4px;
   }
-  .cell .under .sym { font-size: 32px; line-height: 1; }
-  .cell .under .mon {
-    font-size: 10.5px; font-weight: 800; color: var(--muted);
-    text-align: center; line-height: 1.25; word-break: keep-all;
-  }
+  .cell .under .sym { font-size: 34px; line-height: 1; }
+  .cell .under .mon { font-size: 11px; font-weight: 800; color: var(--muted); }
   .cell canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
   .cell canvas:active { cursor: grabbing; }
   .cell.open canvas { transition: opacity .3s ease; opacity: 0; pointer-events: none; }
@@ -96,7 +125,6 @@
   .cell.winhit .mon { color: var(--gold); }
   .cell.dimmed { filter: brightness(.4) saturate(.5); }
 
-  /* suspense tremble when one away from winning */
   .ticket.suspense { animation: tremble .22s linear infinite; }
   @keyframes tremble {
     0%, 100% { transform: translate(0, 0) rotate(0); }
@@ -122,18 +150,15 @@
   }
   @keyframes hotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
-  /* prize lineup teaser */
-  .lineup {
+  .odds {
     display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
-    max-width: 400px;
+    max-width: 400px; font-size: 11.5px;
   }
-  .lineup .chip {
+  .odds .chip {
     background: #141934; border: 1px solid var(--border); border-radius: 999px;
-    padding: 4px 10px; font-size: 11.5px; color: var(--muted); font-weight: 600;
+    padding: 4px 10px; color: var(--muted); font-weight: 600;
   }
-  .lineup .chip.rare { border-color: rgba(255,211,110,.5); color: var(--gold); }
 
-  /* full-screen white flash on win */
   #flash { position: fixed; inset: 0; z-index: 60; pointer-events: none; background: #fff; opacity: 0; }
   @keyframes flash { 0% { opacity: .85; } 100% { opacity: 0; } }
 
@@ -193,6 +218,7 @@
   .btn:disabled { opacity: .5; cursor: not-allowed; }
   .btn.ghost { background: #1d2347; border: 1px solid var(--border); }
   form .btn { margin-top: 18px; }
+  #proceedBtn { margin-top: 8px; }
   #claimBtn { animation: claimpop .5s cubic-bezier(.2,1.4,.3,1); }
   @keyframes claimpop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
@@ -221,24 +247,38 @@
 <div class="wrap">
   <div class="card">
 
-    <!-- STEP 1: scratch match-3 -->
-    <section class="step on" id="stepScratch">
-      <div class="step-label">STEP 1 / 2</div>
-      <h2>같은 그림 <b>3개</b>를 찾으면 당첨!</h2>
+    <!-- STEP 1: choose tools (multi) -->
+    <section class="step on" id="stepTools">
+      <div class="step-label">STEP 1 / 3</div>
+      <h2>받고 싶은 툴을 <b>모두</b> 골라주세요</h2>
+      <p class="lead">여러 개 선택할 수 있어요. 체험 기간은 복권에서 결정돼요!</p>
+      <div id="toolList"></div>
+      <button class="btn" id="proceedBtn" disabled>툴을 먼저 선택해 주세요</button>
+    </section>
+
+    <!-- STEP 2: scratch duration -->
+    <section class="step" id="stepScratch">
+      <div class="step-label">STEP 2 / 3</div>
+      <h2>복권을 긁어 <b>체험 기간</b>을 뽑아요!</h2>
+      <p class="lead">같은 그림 3개를 찾으면 그 기간만큼 무료 체험!</p>
+      <div class="picked">
+        <span id="pickedLabel"></span>
+        <span class="re" id="repick">다시 선택</span>
+      </div>
       <div class="scratch-zone">
         <div class="ticket" id="ticket">
           <div class="ticket-title">✨ 행운의 즉석복권 ✨</div>
           <div class="cells" id="cells"></div>
         </div>
         <div class="match-status" id="matchStatus"></div>
-        <div class="lineup" id="lineup"></div>
+        <div class="odds" id="odds"></div>
         <button class="btn" id="claimBtn" style="display:none;"></button>
       </div>
     </section>
 
-    <!-- STEP 2: form -->
+    <!-- STEP 3: form -->
     <section class="step" id="stepForm">
-      <div class="step-label">STEP 2 / 2</div>
+      <div class="step-label">STEP 3 / 3</div>
       <h2>경품 받을 정보를 알려주세요</h2>
       <div class="prize-summary">🎁 <span><b id="summaryText"></b> 당첨!</span></div>
       <form id="entryForm" novalidate>
@@ -288,60 +328,31 @@
   // Google Apps Script 웹 앱 URL (설정법: apps-script.gs 참고)
   const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyUyqugG6Q4snJl1tuy64N4j_6_6FkIZ1v29beGZfJ1cyCaNl3zektciC1eBPw2Qp5ekA/exec';
 
-  // 경품 풀 — weight 비율로 추첨 (합계 대비 %). 숫자·문구만 바꾸면 됨.
-  // short: 복권 칸에 표시되는 짧은 이름 / full: 당첨 안내·시트 기록용 전체 이름
-  // 세 툴 모두 30·60·90일 제공. 합계 weight 44 — 짧을수록 흔하고 프리미엄일수록 희귀.
-  // 이모지는 전부 달라야 '같은 그림 찾기'가 헷갈리지 않음.
-  const PRIZES = [
-    { emoji: '👑', short: '주이즈 1년',        full: '주이즈 1년 이용권',                    weight: 1 },  //  2.3%
-    { emoji: '💎', short: 'Snorkl+Redmenta',   full: 'Snorkl 90일 + Redmenta 90일 콤보',     weight: 2 },  //  4.5%
-    { emoji: '🎁', short: 'Redmenta+Mizou',    full: 'Redmenta 90일 + Mizou 90일 콤보',      weight: 2 },  //  4.5%
-    { emoji: '🎤', short: 'Snorkl 90일',       full: 'Snorkl 90일 이용권',                   weight: 2 },  //  4.5%
-    { emoji: '🚀', short: 'Mizou 90일',        full: 'Mizou 90일 이용권',                    weight: 2 },  //  4.5%
-    { emoji: '📙', short: 'Redmenta 90일',     full: 'Redmenta 90일 이용권',                 weight: 2 },  //  4.5%
-    { emoji: '✏️', short: 'Snorkl 과제 +10',   full: 'Snorkl 과제 10개 추가',                 weight: 3 },  //  6.8%
-    { emoji: '🎨', short: 'Snorkl 60일',       full: 'Snorkl 60일 이용권',                   weight: 4 },  //  9.1%
-    { emoji: '🛸', short: 'Mizou 60일',        full: 'Mizou 60일 이용권',                    weight: 4 },  //  9.1%
-    { emoji: '📘', short: 'Redmenta 60일',     full: 'Redmenta 60일 이용권',                 weight: 4 },  //  9.1%
-    { emoji: '🎈', short: 'Snorkl 30일',       full: 'Snorkl 30일 이용권',                   weight: 6 },  // 13.6%
-    { emoji: '🤖', short: 'Mizou 30일',        full: 'Mizou 30일 이용권',                    weight: 6 },  // 13.6%
-    { emoji: '📗', short: 'Redmenta 30일',     full: 'Redmenta 30일 이용권',                 weight: 6 },  // 13.6%
+  const TOOLS = [
+    { id: 'Snorkl',   emoji: '🎤', desc: '학생의 생각을 음성·화이트보드로 녹화하고 AI 피드백까지' },
+    { id: 'Redmenta', emoji: '📝', desc: 'AI로 워크시트·퀴즈를 뚝딱 만드는 스마트 학습지 플랫폼' },
+    { id: 'Mizou',    emoji: '🤖', desc: '우리 반 맞춤 교육용 AI 챗봇을 직접 만드는 플랫폼' },
   ];
+
+  // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
+  const PERIODS = [
+    { days: 30, emoji: '🥉', weight: 5 },  // 50%
+    { days: 60, emoji: '🥈', weight: 3 },  // 30%
+    { days: 90, emoji: '🥇', weight: 2 },  // 20%
+  ];
+
+  // 복권 채우기용 중립(행운) 심볼 — 당첨과 무관, 니어미스 재미용
+  const DECOYS = ['🍀', '⭐', '🔔', '🍒', '🎀', '🌈', '🍭'];
   // ==========================================
 
   const $ = (s) => document.querySelector(s);
-  const state = { prize: null, submitted: false };
+  const state = { tools: [], period: null, submitted: false };
 
-  // ---------- step navigation ----------
   function show(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('on'));
     $(id).classList.add('on');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-
-  function drawPrize() {
-    const total = PRIZES.reduce((s, p) => s + p.weight, 0);
-    let r = Math.random() * total;
-    for (const p of PRIZES) { r -= p.weight; if (r < 0) return p; }
-    return PRIZES[PRIZES.length - 1];
-  }
-
-  // prize lineup teaser (rarest two get gold chips)
-  const lineup = $('#lineup');
-  PRIZES.forEach((p, i) => {
-    const c = document.createElement('span');
-    c.className = 'chip' + (i < 2 ? ' rare' : '');
-    c.textContent = `${p.emoji} ${p.short}`;
-    lineup.appendChild(c);
-  });
-
-  // ---------- match-3 scratch ticket ----------
-  const ticket = $('#ticket');
-  const cellsEl = $('#cells');
-  const matchStatus = $('#matchStatus');
-  const claimBtn = $('#claimBtn');
-  let cells = [];   // { p(prize), el, canvas, ctx, opened, moves }
-  let won = false;
 
   function shuffleArr(a) {
     const x = a.slice();
@@ -352,36 +363,104 @@
     return x;
   }
 
+  // ---------- step 1: tool multi-select ----------
+  const toolList = $('#toolList');
+  TOOLS.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tool';
+    b.dataset.id = t.id;
+    b.innerHTML =
+      `<span class="logo">${t.emoji}</span>` +
+      `<span style="flex:1;"><span class="name">${t.id}</span><div class="desc">${t.desc}</div></span>` +
+      `<span class="tick"></span>`;
+    b.addEventListener('click', () => toggleTool(t.id, b));
+    toolList.appendChild(b);
+  });
+
+  function toggleTool(id, el) {
+    const i = state.tools.indexOf(id);
+    if (i >= 0) { state.tools.splice(i, 1); el.classList.remove('sel'); }
+    else { state.tools.push(id); el.classList.add('sel'); }
+    const n = state.tools.length;
+    const btn = $('#proceedBtn');
+    btn.disabled = n === 0;
+    btn.textContent = n === 0 ? '툴을 먼저 선택해 주세요' : `다음 (${n}개 선택) →`;
+  }
+
+  $('#proceedBtn').addEventListener('click', () => {
+    if (state.tools.length === 0) return;
+    // keep chosen order as listed in TOOLS
+    state.tools = TOOLS.map(t => t.id).filter(id => state.tools.includes(id));
+    $('#pickedLabel').textContent = '🎯 ' + state.tools.map(id => {
+      const t = TOOLS.find(x => x.id === id); return `${t.emoji} ${id}`;
+    }).join(' + ');
+    show('#stepScratch');
+    buildTicket();
+  });
+
+  $('#repick').addEventListener('click', () => { stopHeartbeat(); show('#stepTools'); });
+
+  // odds teaser
+  const oddsEl = $('#odds');
+  PERIODS.forEach(p => {
+    const total = PERIODS.reduce((s, x) => s + x.weight, 0);
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.textContent = `${p.emoji} ${p.days}일 ${Math.round(p.weight / total * 100)}%`;
+    oddsEl.appendChild(c);
+  });
+
+  function drawPeriod() {
+    const total = PERIODS.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total;
+    for (const p of PERIODS) { r -= p.weight; if (r < 0) return p; }
+    return PERIODS[0];
+  }
+
+  // ---------- step 2: match-3 scratch ----------
+  const ticket = $('#ticket');
+  const cellsEl = $('#cells');
+  const matchStatus = $('#matchStatus');
+  const claimBtn = $('#claimBtn');
+  let cells = [];   // { key, label, el, canvas, ctx, opened, moves }
+  let won = false;
+
   function buildTicket() {
     won = false;
-    state.prize = drawPrize();
+    state.period = drawPeriod();
     stopHeartbeat();
     ticket.classList.remove('suspense', 'revealed');
     claimBtn.style.display = 'none';
     setStatus('🪙 은박을 긁어서 같은 그림 3개를 찾아보세요!');
 
-    // 3×4 board (12 cells): winning prize ×3, five decoys (four ×2 + one ×1)
-    // — every decoy caps at 2 so only the winner can reach 3
-    const others = shuffleArr(PRIZES.filter(p => p !== state.prize)).slice(0, 5);
+    // winning period ×3, the other two periods ×2 (decoy periods),
+    // plus neutral lucky symbols — only the winning period can reach 3.
+    const winSym = { key: state.period.emoji, label: `${state.period.days}일` };
+    const otherPeriods = PERIODS.filter(p => p !== state.period)
+      .map(p => ({ key: p.emoji, label: `${p.days}일` }));
+    const decoys = shuffleArr(DECOYS).slice(0, 3)
+      .map(e => ({ key: e, label: '행운' }));
+
     const layout = shuffleArr([
-      state.prize, state.prize, state.prize,
-      others[0], others[0],
-      others[1], others[1],
-      others[2], others[2],
-      others[3], others[3],
-      others[4],
+      winSym, winSym, winSym,
+      otherPeriods[0], otherPeriods[0],
+      otherPeriods[1], otherPeriods[1],
+      decoys[0], decoys[0],
+      decoys[1], decoys[1],
+      decoys[2],
     ]);
 
     cellsEl.innerHTML = '';
-    cells = layout.map(p => {
+    cells = layout.map(sym => {
       const el = document.createElement('div');
       el.className = 'cell';
       el.innerHTML =
-        `<div class="under"><div class="sym">${p.emoji}</div><div class="mon">${p.short}</div></div>` +
+        `<div class="under"><div class="sym">${sym.key}</div><div class="mon">${sym.label}</div></div>` +
         `<canvas></canvas>`;
       cellsEl.appendChild(el);
       const canvas = el.querySelector('canvas');
-      const cell = { p, el, canvas, ctx: canvas.getContext('2d'), opened: false, moves: 0 };
+      const cell = { key: sym.key, label: sym.label, el, canvas, ctx: canvas.getContext('2d'), opened: false, moves: 0 };
       attachScratch(cell);
       return cell;
     });
@@ -390,7 +469,7 @@
 
   function paintCellFoil(cell) {
     const rect = cell.canvas.getBoundingClientRect();
-    if (rect.width < 4) return; // not laid out yet
+    if (rect.width < 4) return;
     const dpr = window.devicePixelRatio || 1;
     cell.canvas.width = Math.round(rect.width * dpr);
     cell.canvas.height = Math.round(rect.height * dpr);
@@ -454,23 +533,23 @@
     popSound();
     if ('vibrate' in navigator) navigator.vibrate(20);
 
-    const counts = new Map();
-    cells.filter(c => c.opened).forEach(c => counts.set(c.p, (counts.get(c.p) || 0) + 1));
+    const counts = {};
+    cells.filter(c => c.opened).forEach(c => { counts[c.key] = (counts[c.key] || 0) + 1; });
 
-    if (counts.get(cell.p) === 3) { winReveal(cell.p); return; }
+    if (cell.key === state.period.emoji && counts[state.period.emoji] === 3) { winReveal(); return; }
 
-    // status: whichever prize currently leads
-    const [bestP, bestN] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (bestN === 2) {
-      setStatus(`🔥 ${bestP.emoji} ${bestP.short} ×2!! 같은 그림 하나만 더…!`, true);
+    const best = Math.max(...Object.values(counts));
+    if (best === 2) {
+      setStatus('🔥 같은 그림 2개!! 하나만 더 나오면 당첨… 두근두근!', true);
       ticket.classList.add('suspense');
       startHeartbeat();
     } else {
-      setStatus(`${cell.p.emoji} ${cell.p.short} 발견! 같은 그림 ${3 - counts.get(cell.p)}개 더 나오면 당첨`);
+      const left = 3 - (counts[cell.key] || 0);
+      setStatus(`${cell.key} 발견! 같은 그림을 계속 찾아보세요`);
     }
   }
 
-  function winReveal(p) {
+  function winReveal() {
     won = true;
     stopHeartbeat();
     ticket.classList.remove('suspense');
@@ -478,18 +557,17 @@
     riserSound();
 
     setTimeout(() => {
-      // open the whole board, spotlight the winning trio
       cells.forEach(c => {
         if (!c.opened) { c.opened = true; c.el.classList.add('open'); }
-        c.el.classList.add(c.p === p ? 'winhit' : 'dimmed');
+        c.el.classList.add(c.key === state.period.emoji ? 'winhit' : 'dimmed');
       });
       ticket.classList.add('revealed');
       flashScreen();
       playFanfare();
       confettiBurst();
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
-      setStatus(`🎉 ${p.emoji} ${p.full} 당첨!`, true);
-      claimBtn.textContent = `🎁 경품 받기`;
+      setStatus(`🎉 ${state.period.emoji} ${state.period.days}일 무료 체험 당첨!`, true);
+      claimBtn.textContent = `🎁 ${state.period.days}일 체험권 받기`;
       claimBtn.style.display = '';
     }, 1000);
   }
@@ -503,18 +581,23 @@
     if ($('#stepScratch').classList.contains('on')) cells.filter(c => !c.opened).forEach(paintCellFoil);
   });
 
+  // 최종 경품 문구: 선택 툴 + 당첨 기간
+  function prizeText() {
+    return `${state.tools.join(' · ')} ${state.period.days}일 무료 체험`;
+  }
+
   claimBtn.addEventListener('click', () => {
-    $('#summaryText').textContent = `${state.prize.emoji} ${state.prize.full}`;
+    $('#summaryText').textContent = `🎓 ${prizeText()}`;
     show('#stepForm');
     $('#fName').focus();
   });
 
-  // early-delivery checkbox: highlight the row when checked
+  // early-delivery checkbox highlight
   $('#fEarly').addEventListener('change', (e) => {
     $('#earlyRow').classList.toggle('checked', e.target.checked);
   });
 
-  // ---------- form ----------
+  // ---------- step 3: form ----------
   const form = $('#entryForm');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -541,13 +624,17 @@
     btn.disabled = true; btn.textContent = '전송 중…';
     try {
       if (SHEET_ENDPOINT) {
-        // 단순 요청(form-urlencoded)이라 Apps Script가 CORS 허용 — 응답 JSON 읽어 중복 판정
         const res = await fetch(SHEET_ENDPOINT, {
           method: 'POST',
-          body: new URLSearchParams({ name, school, email, prize: state.prize.full, early: early ? '미리받기' : '' }),
+          body: new URLSearchParams({
+            name, school, email,
+            tools: state.tools.join(', '),
+            days: String(state.period.days),
+            early: early ? '미리받기' : '',
+          }),
         });
         if (!res.ok) throw new Error('submit failed: ' + res.status);
-        const data = await res.json().catch(() => ({ ok: true })); // 응답 못 읽으면 성공으로 간주(관대)
+        const data = await res.json().catch(() => ({ ok: true }));
         if (data && data.dup) {
           btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
           $('#eEmail').textContent = '이미 참여한 이메일이에요 — 한 이메일당 1회만 참여할 수 있어요.';
@@ -555,11 +642,11 @@
           return;
         }
       } else {
-        console.warn('SHEET_ENDPOINT 미설정 — 응모 데이터가 저장되지 않았습니다', { name, school, email, prize: state.prize.full, early });
+        console.warn('SHEET_ENDPOINT 미설정 — 저장 안 됨', { name, school, email, tools: state.tools, days: state.period.days, early });
       }
       state.submitted = true;
       $('#doneText').innerHTML =
-        `<b>${escapeHtml(name)}</b> 선생님, <b>${escapeHtml(state.prize.full)}</b> 신청이 접수됐어요.<br/>` +
+        `<b>${escapeHtml(name)}</b> 선생님, <b>${escapeHtml(prizeText())}</b> 신청이 접수됐어요.<br/>` +
         `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 ` +
         (early
           ? `<b>미리 받기</b> 요청이 접수되어 <b>다음 주 월요일</b>에 먼저 보내드릴게요! ⚡`
@@ -577,7 +664,7 @@
 
   function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
-  // ---------- audio (synthesized) ----------
+  // ---------- audio ----------
   let audioCtx = null;
   function ensureAudio() {
     if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
@@ -599,7 +686,6 @@
   function riserSound() { for (let i = 0; i < 9; i++) blip(280 + i * 95, 0.08, 'sawtooth', 0.07, i * 0.1); }
   function playFanfare() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => blip(f, 0.32, 'triangle', 0.2, i * 0.12)); }
 
-  // heartbeat while one match away
   let hbTimer = null;
   function startHeartbeat() {
     if (hbTimer || !audioCtx) return;
@@ -643,9 +729,6 @@
     if (parts.length) requestAnimationFrame(ctick);
     else { cctx.clearRect(0, 0, cc.width, cc.height); confettiBurst.running = false; }
   }
-
-  // ---------- init ----------
-  buildTicket();
 })();
 </script>
 </body>
