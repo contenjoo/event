@@ -290,15 +290,22 @@
 
   // 경품 풀 — weight 비율로 추첨 (합계 대비 %). 숫자·문구만 바꾸면 됨.
   // short: 복권 칸에 표시되는 짧은 이름 / full: 당첨 안내·시트 기록용 전체 이름
-  // 합계 weight 26 — 한두 경품에 몰리지 않게 완만히 분산 (최상위 주이즈만 희귀)
+  // 세 툴 모두 30·60·90일 제공. 합계 weight 44 — 짧을수록 흔하고 프리미엄일수록 희귀.
+  // 이모지는 전부 달라야 '같은 그림 찾기'가 헷갈리지 않음.
   const PRIZES = [
-    { emoji: '👑', short: '주이즈 1년',        full: '주이즈 1년 이용권',                          weight: 2 },  //  7.7%
-    { emoji: '🚀', short: 'Snorkl+Redmenta',   full: 'Snorkl 90일 + Redmenta 90일 콤보',           weight: 3 },  // 11.5%
-    { emoji: '🎁', short: 'Redmenta+Mizou',    full: 'Redmenta 90일 + Mizou 90일 콤보',            weight: 3 },  // 11.5%
-    { emoji: '🎤', short: 'Snorkl 과제 +10',   full: 'Snorkl 과제 10개 추가',                       weight: 4 },  // 15.4%
-    { emoji: '📝', short: 'Redmenta 90일',     full: 'Redmenta 90일 이용권',                       weight: 4 },  // 15.4%
-    { emoji: '🤖', short: 'Mizou 60일',        full: 'Mizou 60일 이용권',                          weight: 5 },  // 19.2%
-    { emoji: '🎈', short: 'Snorkl 30일',       full: 'Snorkl 30일 이용권',                         weight: 5 },  // 19.2%
+    { emoji: '👑', short: '주이즈 1년',        full: '주이즈 1년 이용권',                    weight: 1 },  //  2.3%
+    { emoji: '💎', short: 'Snorkl+Redmenta',   full: 'Snorkl 90일 + Redmenta 90일 콤보',     weight: 2 },  //  4.5%
+    { emoji: '🎁', short: 'Redmenta+Mizou',    full: 'Redmenta 90일 + Mizou 90일 콤보',      weight: 2 },  //  4.5%
+    { emoji: '🎤', short: 'Snorkl 90일',       full: 'Snorkl 90일 이용권',                   weight: 2 },  //  4.5%
+    { emoji: '🚀', short: 'Mizou 90일',        full: 'Mizou 90일 이용권',                    weight: 2 },  //  4.5%
+    { emoji: '📙', short: 'Redmenta 90일',     full: 'Redmenta 90일 이용권',                 weight: 2 },  //  4.5%
+    { emoji: '✏️', short: 'Snorkl 과제 +10',   full: 'Snorkl 과제 10개 추가',                 weight: 3 },  //  6.8%
+    { emoji: '🎨', short: 'Snorkl 60일',       full: 'Snorkl 60일 이용권',                   weight: 4 },  //  9.1%
+    { emoji: '🛸', short: 'Mizou 60일',        full: 'Mizou 60일 이용권',                    weight: 4 },  //  9.1%
+    { emoji: '📘', short: 'Redmenta 60일',     full: 'Redmenta 60일 이용권',                 weight: 4 },  //  9.1%
+    { emoji: '🎈', short: 'Snorkl 30일',       full: 'Snorkl 30일 이용권',                   weight: 6 },  // 13.6%
+    { emoji: '🤖', short: 'Mizou 30일',        full: 'Mizou 30일 이용권',                    weight: 6 },  // 13.6%
+    { emoji: '📗', short: 'Redmenta 30일',     full: 'Redmenta 30일 이용권',                 weight: 6 },  // 13.6%
   ];
   // ==========================================
 
