@@ -177,6 +177,10 @@
   }
   input:focus { outline: none; border-color: var(--accent-2); }
   .err { color: var(--accent); font-size: 12px; margin-top: 5px; min-height: 15px; }
+  .honeypot {
+    position: absolute; left: -10000px; width: 1px; height: 1px;
+    opacity: 0; pointer-events: none;
+  }
 
   .notice {
     background: #141934; border: 1px solid var(--border); border-left: 3px solid var(--gold);
@@ -283,17 +287,19 @@
       <div class="prize-summary">🎁 <span><b id="summaryText"></b> 당첨!</span></div>
       <form id="entryForm" novalidate>
         <label for="fName">이름</label>
-        <input id="fName" name="name" autocomplete="name" placeholder="홍길동" required />
+        <input id="fName" name="name" autocomplete="name" maxlength="80" placeholder="홍길동" required />
         <div class="err" id="eName"></div>
         <label for="fSchool">학교</label>
-        <input id="fSchool" name="school" autocomplete="organization" placeholder="○○초등학교" required />
+        <input id="fSchool" name="school" autocomplete="organization" maxlength="120" placeholder="○○초등학교" required />
         <div class="err" id="eSchool"></div>
         <label for="fEmail">이메일</label>
-        <input id="fEmail" name="email" type="email" autocomplete="email" placeholder="teacher@school.kr" required />
+        <input id="fEmail" name="email" type="email" maxlength="254" autocomplete="email" placeholder="teacher@school.kr" required />
         <div class="err" id="eEmail"></div>
         <label for="fEmail2">이메일 확인 <span style="color:var(--accent);">(한 번 더 정확히!)</span></label>
-        <input id="fEmail2" name="email2" type="email" autocomplete="off" placeholder="이메일을 다시 입력해 주세요" required />
+        <input id="fEmail2" name="email2" type="email" maxlength="254" autocomplete="off" placeholder="이메일을 다시 입력해 주세요" required />
         <div class="err" id="eEmail2"></div>
+
+        <input class="honeypot" id="fWebsite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
 
         <div class="notice">🗓️ 경품은 <b>8월 19일</b>에 입력하신 이메일로 <b>일괄 발송</b>될 예정이에요.</div>
         <label class="check-row" id="earlyRow" for="fEarly">
@@ -356,7 +362,63 @@
   // ==========================================
 
   const $ = (s) => document.querySelector(s);
-  const state = { tools: [], period: null, bonuses: [], submitted: false };
+  const CLIENT_ID = getClientId();
+  let backendReady = false;
+  const state = {
+    tools: [], period: null, bonuses: [], drawToken: '', serverPrize: '', submitted: false,
+  };
+
+  function getClientId() {
+    const key = 'share-awards-client-id';
+    try {
+      let id = sessionStorage.getItem(key);
+      if (!id) {
+        id = window.crypto && window.crypto.randomUUID
+          ? window.crypto.randomUUID()
+          : `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem(key, id);
+      }
+      return id;
+    } catch (_) {
+      return `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    }
+  }
+
+  async function assertBackendReady() {
+    if (backendReady) return;
+    const res = await fetch(SHEET_ENDPOINT, { cache: 'no-store' });
+    const marker = (await res.text()).trim();
+    if (!res.ok || marker !== 'EVENT_API_V2') {
+      const error = new Error('backend_outdated');
+      error.code = 'backend_outdated';
+      throw error;
+    }
+    backendReady = true;
+  }
+
+  async function requestDraw() {
+    if (!SHEET_ENDPOINT) throw new Error('endpoint_missing');
+    await assertBackendReady();
+    const res = await fetch(SHEET_ENDPOINT, {
+      method: 'POST',
+      body: new URLSearchParams({
+        action: 'draw',
+        tools: state.tools.join(', '),
+        clientId: CLIENT_ID,
+        website: '',
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data || !data.ok) {
+      const error = new Error((data && data.error) || 'draw_failed');
+      error.code = (data && data.error) || 'draw_failed';
+      throw error;
+    }
+    if (!data.token || ![30, 60, 90].includes(Number(data.days)) || !Array.isArray(data.specials)) {
+      throw new Error('invalid_draw_response');
+    }
+    return data;
+  }
 
   function show(id) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('on'));
@@ -398,35 +460,43 @@
     btn.textContent = n === 0 ? '툴을 먼저 선택해 주세요' : `다음 (${n}개 선택) →`;
   }
 
-  $('#proceedBtn').addEventListener('click', () => {
+  $('#proceedBtn').addEventListener('click', async () => {
     if (state.tools.length === 0) return;
     // keep chosen order as listed in TOOLS
     state.tools = TOOLS.map(t => t.id).filter(id => state.tools.includes(id));
-    $('#pickedLabel').textContent = '🎯 ' + state.tools.map(id => {
-      const t = TOOLS.find(x => x.id === id); return `${t.emoji} ${id}`;
-    }).join(' + ');
-    show('#stepScratch');
-    buildTicket();
+    const btn = $('#proceedBtn');
+    btn.disabled = true;
+    btn.textContent = '복권을 준비하는 중…';
+    try {
+      const draw = await requestDraw();
+      state.drawToken = draw.token;
+      state.serverPrize = String(draw.prize || '');
+      $('#pickedLabel').textContent = '🎯 ' + state.tools.map(id => {
+        const t = TOOLS.find(x => x.id === id); return `${t.emoji} ${id}`;
+      }).join(' + ');
+      show('#stepScratch');
+      buildTicket(draw);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = err.code === 'rate_limited'
+        ? '잠시 후 다시 시도해 주세요'
+        : err.code === 'backend_outdated'
+          ? '이벤트 서버 업데이트 중 — 잠시 후 다시 시도'
+          : '복권 준비에 실패했어요 — 다시 시도';
+    }
   });
 
-  $('#repick').addEventListener('click', () => { stopHeartbeat(); show('#stepTools'); });
-
-  function drawPeriod() {
-    const total = PERIODS.reduce((s, p) => s + p.weight, 0);
-    let r = Math.random() * total;
-    for (const p of PERIODS) { r -= p.weight; if (r < 0) return p; }
-    return PERIODS[0];
-  }
+  $('#repick').addEventListener('click', () => {
+    stopHeartbeat();
+    state.drawToken = '';
+    state.serverPrize = '';
+    show('#stepTools');
+  });
 
   // 현재 선택에서 가능한 특별상
   function eligibleSpecials() {
     return SPECIALS.filter(s => s.always || state.tools.includes(s.requiresTool));
   }
-  // 각 특별상을 독립 확률로 보너스 지급 여부 결정
-  function rollBonuses() {
-    return eligibleSpecials().filter(s => Math.random() < s.chance);
-  }
-
   // odds teaser — 기간 확률 + 특별상 보너스 확률
   function renderOdds() {
     const oddsEl = $('#odds');
@@ -446,11 +516,13 @@
   let cells = [];   // { key, label, el, canvas, ctx, opened, moves }
   let won = false;
 
-  function buildTicket() {
+  function buildTicket(draw) {
     won = false;
     renderOdds();
-    state.period = drawPeriod();       // 복권은 기간을 결정
-    state.bonuses = rollBonuses();     // 특별상은 추가 보너스 (0~여러 개)
+    state.period = PERIODS.find(p => p.days === Number(draw.days));
+    const specialSet = new Set(draw.specials);
+    state.bonuses = SPECIALS.filter(s => specialSet.has(s.full));
+    if (!state.period) throw new Error('invalid_draw_period');
     stopHeartbeat();
     ticket.classList.remove('suspense', 'revealed');
     claimBtn.style.display = 'none';
@@ -614,6 +686,7 @@
 
   // 최종 경품 문구: "선택 툴 기간 무료 체험" + 보너스 특별상들
   function prizeText() {
+    if (state.serverPrize) return state.serverPrize;
     const base = `${state.tools.join(' · ')} ${state.period.days}일 무료 체험`;
     if (!state.bonuses.length) return base;
     return base + ' + ' + state.bonuses.map(s => s.full).join(' + ');
@@ -651,33 +724,38 @@
       : '이메일을 한 번 더 입력해 주세요';
     ok = ok && email2Ok;
     if (!ok) return;
+    if (!state.drawToken) {
+      $('#eEmail').textContent = '복권 정보가 만료됐어요. 처음부터 다시 선택해 주세요.';
+      return;
+    }
     const early = $('#fEarly').checked;
 
     const btn = $('#submitBtn');
     btn.disabled = true; btn.textContent = '전송 중…';
     try {
-      if (SHEET_ENDPOINT) {
-        const res = await fetch(SHEET_ENDPOINT, {
-          method: 'POST',
-          body: new URLSearchParams({
-            name, school, email,
-            tools: state.tools.join(', '),
-            days: String(state.period.days),
-            special: state.bonuses.map(s => s.full).join(', '),
-            prize: prizeText(),
-            early: early ? '미리받기' : '',
-          }),
-        });
-        if (!res.ok) throw new Error('submit failed: ' + res.status);
-        const data = await res.json().catch(() => ({ ok: true }));
-        if (data && data.dup) {
-          btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
-          $('#eEmail').textContent = '이미 참여한 이메일이에요 — 한 이메일당 1회만 참여할 수 있어요.';
-          $('#fEmail').focus();
-          return;
-        }
-      } else {
-        console.warn('SHEET_ENDPOINT 미설정 — 저장 안 됨', { name, school, email, tools: state.tools, prize: prizeText(), early });
+      if (!SHEET_ENDPOINT) throw new Error('endpoint_missing');
+      const res = await fetch(SHEET_ENDPOINT, {
+        method: 'POST',
+        body: new URLSearchParams({
+          action: 'submit',
+          token: state.drawToken,
+          name, school, email, email2,
+          early: early ? '미리받기' : '',
+          website: $('#fWebsite').value.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) throw new Error('submit_failed');
+      if (data.dup) {
+        btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
+        $('#eEmail').textContent = '이미 참여한 이메일이에요 — 한 이메일당 1회만 참여할 수 있어요.';
+        $('#fEmail').focus();
+        return;
+      }
+      if (!data.ok) {
+        const error = new Error(data.error || 'submit_failed');
+        error.code = data.error || 'submit_failed';
+        throw error;
       }
       state.submitted = true;
       $('#doneText').innerHTML =
@@ -691,13 +769,19 @@
       confettiBurst();
     } catch (err) {
       btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
-      $('#eEmail').textContent = '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
+      $('#eEmail').textContent = ['draw_expired', 'invalid_token'].includes(err.code)
+        ? '복권 정보가 만료됐어요. 처음부터 다시 선택해 주세요.'
+        : '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
       return;
     }
     btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
   });
 
-  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   // ---------- audio ----------
   let audioCtx = null;
