@@ -260,11 +260,11 @@
       <button class="btn" id="proceedBtn" disabled>툴을 먼저 선택해 주세요</button>
     </section>
 
-    <!-- STEP 2: scratch duration -->
+    <!-- STEP 2: scratch prizes -->
     <section class="step" id="stepScratch">
       <div class="step-label">STEP 2 / 3</div>
-      <h2>복권을 긁어 <b>체험 기간</b>을 뽑아요!</h2>
-      <p class="lead">같은 그림 3개를 찾으면 그 기간만큼 무료 체험!</p>
+      <h2>복권을 긁어 <b>당첨 경품</b>을 확인해요!</h2>
+      <p class="lead">같은 그림 3개를 찾아 당첨 경품을 모두 확인하세요!</p>
       <div class="picked">
         <span id="pickedLabel"></span>
         <span class="re" id="repick">다시 선택</span>
@@ -512,6 +512,8 @@
   const claimBtn = $('#claimBtn');
   let cells = [];   // { key, label, el, canvas, ctx, opened, moves }
   let won = false;
+  let winningKeys = new Set();
+  let foundWinningKeys = new Set();
 
   function buildTicket(draw) {
     won = false;
@@ -520,26 +522,19 @@
     const specialSet = new Set(draw.specials);
     state.bonuses = SPECIALS.filter(s => specialSet.has(s.full));
     if (!state.period) throw new Error('invalid_draw_period');
+    winningKeys = new Set([state.period.emoji, ...state.bonuses.map(s => s.emoji)]);
+    foundWinningKeys = new Set();
     stopHeartbeat();
     ticket.classList.remove('suspense', 'revealed');
     claimBtn.style.display = 'none';
     setStatus('🪙 은박을 긁어서 같은 그림 3개를 찾아보세요!');
 
-    // 당첨 기간 ×3, 나머지 기간 ×2 + 중립 심볼로 채움 — 당첨 기간만 3개 도달.
-    const winSym = { key: state.period.emoji, label: `${state.period.days}일` };
-    const otherPeriods = shuffleArr(PERIODS.filter(p => p !== state.period))
-      .map(p => ({ key: p.emoji, label: `${p.days}일` }));
-    const neutrals = shuffleArr(DECOYS).map(e => ({ key: e, label: '행운' }));
-    const decoys = otherPeriods.concat(neutrals).slice(0, 5); // 5종, 서로 다른 심볼
-
-    const layout = shuffleArr([
-      winSym, winSym, winSym,
-      decoys[0], decoys[0],
-      decoys[1], decoys[1],
-      decoys[2], decoys[2],
-      decoys[3], decoys[3],
-      decoys[4],
-    ]);
+    // 기간과 서버에서 당첨된 특별 보너스를 각각 3칸씩 넣어 실제 긁기로 공개합니다.
+    const prizeSymbols = [
+      { key: state.period.emoji, label: `${state.period.days}일` },
+      ...state.bonuses.map(s => ({ key: s.emoji, label: s.short })),
+    ];
+    const layout = buildTicketLayout(prizeSymbols);
 
     cellsEl.innerHTML = '';
     cells = layout.map(sym => {
@@ -555,6 +550,30 @@
       return cell;
     });
     cells.forEach(paintCellFoil);
+  }
+
+  function buildTicketLayout(prizeSymbols) {
+    const layout = [];
+    prizeSymbols.forEach(sym => layout.push(sym, sym, sym));
+
+    const prizeKeys = new Set(prizeSymbols.map(sym => sym.key));
+    const fillers = shuffleArr([
+      ...PERIODS
+        .filter(p => !prizeKeys.has(p.emoji))
+        .map(p => ({ key: p.emoji, label: `${p.days}일` })),
+      ...DECOYS
+        .filter(emoji => !prizeKeys.has(emoji))
+        .map(emoji => ({ key: emoji, label: '행운' })),
+    ]);
+
+    let remaining = 12 - layout.length;
+    fillers.forEach(sym => {
+      const copies = Math.min(2, remaining);
+      for (let i = 0; i < copies; i++) layout.push(sym);
+      remaining -= copies;
+    });
+    if (layout.length !== 12) throw new Error('invalid_ticket_layout');
+    return shuffleArr(layout);
   }
 
   function paintCellFoil(cell) {
@@ -626,47 +645,66 @@
     const counts = {};
     cells.filter(c => c.opened).forEach(c => { counts[c.key] = (counts[c.key] || 0) + 1; });
 
-    if (cell.key === state.period.emoji && counts[state.period.emoji] === 3) { winReveal(); return; }
+    if (winningKeys.has(cell.key) && counts[cell.key] === 3 && !foundWinningKeys.has(cell.key)) {
+      revealMatchedPrize(cell.key);
+      return;
+    }
 
-    const best = Math.max(...Object.values(counts));
+    const unmatchedCounts = Object.entries(counts)
+      .filter(([key]) => !foundWinningKeys.has(key))
+      .map(([, count]) => count);
+    const best = unmatchedCounts.length ? Math.max(...unmatchedCounts) : 0;
     if (best === 2) {
       setStatus('🔥 같은 그림 2개!! 하나만 더 나오면 당첨… 두근두근!', true);
       ticket.classList.add('suspense');
       startHeartbeat();
     } else {
-      const left = 3 - (counts[cell.key] || 0);
       setStatus(`${cell.key} 발견! 같은 그림을 계속 찾아보세요`);
     }
   }
 
-  function winReveal() {
+  function revealMatchedPrize(key) {
+    foundWinningKeys.add(key);
+    cells.filter(c => c.key === key).forEach(c => c.el.classList.add('winhit'));
+    stopHeartbeat();
+    ticket.classList.remove('suspense');
+    playFanfare();
+    confettiBurst();
+
+    const bonus = state.bonuses.find(item => item.emoji === key);
+    const message = bonus
+      ? `🎊 ${bonus.emoji} ${bonus.full} 당첨!`
+      : `🎉 ${state.period.emoji} ${state.period.days}일 무료 체험 당첨!`;
+
+    if (foundWinningKeys.size < winningKeys.size) {
+      setStatus(`${message} 다른 당첨 그림도 계속 찾아보세요`, true);
+      return;
+    }
+    finishTicket();
+  }
+
+  function finishTicket() {
     won = true;
     stopHeartbeat();
     ticket.classList.remove('suspense');
-    setStatus('두구두구두구…', true);
+    setStatus('당첨 결과를 확인하는 중…', true);
     riserSound();
 
     setTimeout(() => {
       cells.forEach(c => {
         if (!c.opened) { c.opened = true; c.el.classList.add('open'); }
-        c.el.classList.add(c.key === state.period.emoji ? 'winhit' : 'dimmed');
+        c.el.classList.add(winningKeys.has(c.key) ? 'winhit' : 'dimmed');
       });
       ticket.classList.add('revealed');
       flashScreen();
       playFanfare();
       confettiBurst();
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
-      setStatus(`🎉 ${state.period.emoji} ${state.period.days}일 무료 체험 당첨!`, true);
-
-      // 특별상 보너스가 있으면 잠깐 뒤 추가 축포 + 문구
-      if (state.bonuses.length) {
-        setTimeout(() => {
-          playFanfare();
-          confettiBurst();
-          const b = state.bonuses.map(s => `${s.emoji} ${s.full}`).join(' + ');
-          setStatus(`🎊 특별 보너스까지! ${b}`, true);
-        }, 1200);
-      }
+      const prizes = [
+        `${state.period.emoji} ${state.period.days}일 무료 체험`,
+        ...state.bonuses.map(s => `${s.emoji} ${s.full}`),
+      ];
+      setStatus(`🎉 ${prizes.join(' + ')} 당첨!`, true);
       claimBtn.textContent = '🎁 경품 받기';
       claimBtn.style.display = '';
     }, 1000);
