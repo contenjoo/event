@@ -497,15 +497,12 @@
   function eligibleSpecials() {
     return SPECIALS.filter(s => s.always || state.tools.includes(s.requiresTool));
   }
-  // odds teaser — 기간 확률 + 특별상 보너스 확률
+  // 특별상 보너스 확률만 안내하고 기간별 당첨 확률은 노출하지 않습니다.
   function renderOdds() {
     const oddsEl = $('#odds');
-    const total = PERIODS.reduce((s, p) => s + p.weight, 0);
-    const periodChips = PERIODS.map(p =>
-      `<span class="chip">${p.emoji} ${p.days}일 ${Math.round(p.weight / total * 100)}%</span>`);
     const specialChips = eligibleSpecials().map(s =>
       `<span class="chip">${s.emoji} ${s.short} 보너스 ${Math.round(s.chance * 100)}%</span>`);
-    oddsEl.innerHTML = periodChips.concat(specialChips).join('');
+    oddsEl.innerHTML = specialChips.join('');
   }
 
   // ---------- step 2: match-3 scratch ----------
