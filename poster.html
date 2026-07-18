@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>2026 쉐어워즈 — A3 포스터</title>
+<style>
+  :root {
+    --ink: #1a1230;
+    --muted: #6b7194;
+    --accent: #ff5d8f;
+    --accent-2: #6c5ce7;
+    --gold: #d99a1c;
+    --line: #e3e6f2;
+  }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* A3 세로 = 297 × 420mm */
+  @page { size: A3 portrait; margin: 0; }
+
+  html, body { margin: 0; padding: 0; background: #f4f5fb; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    color: var(--ink);
+  }
+
+  .page {
+    width: 297mm; height: 420mm;
+    margin: 0 auto;
+    background: #ffffff;
+    position: relative;
+    display: flex; flex-direction: column;
+    padding: 26mm 24mm 20mm;
+    overflow: hidden;
+  }
+  /* 상단 컬러 띠 */
+  .page::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 12mm;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+
+  /* ---- 헤더 ---- */
+  .head { text-align: center; }
+  .year { font-size: 12mm; font-weight: 900; letter-spacing: 4mm; color: var(--accent); margin-left: 4mm; }
+  .title { font-size: 34mm; font-weight: 900; line-height: 1; margin: 3mm 0 0; letter-spacing: -1mm; }
+  .sub {
+    font-size: 9.5mm; font-weight: 800; margin: 6mm 0 0;
+    background: linear-gradient(90deg, var(--gold), var(--accent));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .with { font-size: 6mm; color: var(--muted); margin: 5mm 0 0; font-weight: 600; }
+  .with b { color: var(--ink); }
+
+  /* ---- QR (중앙) ---- */
+  .qr-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .scan-label {
+    font-size: 8mm; font-weight: 900; color: var(--ink);
+    margin-bottom: 8mm; text-align: center;
+  }
+  .scan-label .em {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .qr-box {
+    width: 120mm; height: 120mm;
+    border: 1.4mm dashed var(--accent);
+    border-radius: 8mm;
+    display: flex; align-items: center; justify-content: center;
+    background: #fafbff;
+  }
+  .qr-box span { font-size: 6mm; color: var(--muted); font-weight: 700; letter-spacing: .5mm; }
+  .scan-hint { margin-top: 7mm; font-size: 6mm; color: var(--muted); font-weight: 600; }
+
+  /* ---- 단계 / 경품 텍스트 ---- */
+  .steps {
+    display: flex; justify-content: center; gap: 10mm;
+    margin-top: 4mm; font-size: 6mm; font-weight: 800; color: var(--ink);
+  }
+  .steps b { color: var(--accent); }
+  .prizes {
+    margin-top: 9mm; text-align: center;
+    font-size: 6.2mm; line-height: 1.7; color: var(--ink); font-weight: 600;
+  }
+  .prizes .big { font-weight: 900; color: var(--accent-2); }
+  .prizes .gold { color: var(--gold); font-weight: 900; }
+
+  /* ---- 푸터 ---- */
+  .foot {
+    text-align: center; margin-top: 10mm;
+    font-size: 5mm; color: var(--muted); font-weight: 600;
+  }
+
+  /* 화면 미리보기용 그림자 (인쇄 시 무시) */
+  @media screen {
+    body { padding: 20px 0; }
+    .page { box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="head">
+      <div class="year">2026</div>
+      <div class="title">쉐어워즈</div>
+      <div class="sub">디지로그, 나만의 수업 속도를 찾아서</div>
+      <div class="with">with <b>오늘배움</b></div>
+    </div>
+
+    <div class="qr-wrap">
+      <div class="scan-label">📱 <span class="em">여기를 스캔</span>하고 경품 받아가세요!</div>
+      <div class="qr-box"><span>QR 코드 자리</span></div>
+      <div class="scan-hint">휴대폰 카메라로 QR을 비추면 이벤트 페이지가 열려요</div>
+    </div>
+
+    <div class="steps">
+      <span>1. <b>툴 고르기</b></span>
+      <span>2. <b>복권 긁기</b></span>
+      <span>3. <b>경품 받기</b></span>
+    </div>
+
+    <div class="prizes">
+      Snorkl · Redmenta · Mizou <span class="big">최대 90일 무료 체험</span><br/>
+      + 행운의 특별상 <span class="gold">주이즈 1년</span> · <span class="gold">Snorkl 과제 +10</span>
+    </div>
+
+    <div class="foot">2026 쉐어워즈 · with 오늘배움</div>
+  </div>
+</body>
+</html>
