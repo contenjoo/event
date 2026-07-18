@@ -756,11 +756,23 @@
     else { cctx.clearRect(0,0,cc.width,cc.height); confettiBurst.running=false; }
   }
 
-  // init demo
-  peopleEl.value = '홍길동\n김영희\n이철수\n박민수';
-  prizesEl.value = '치킨 기프티콘\n스타벅스 쿠폰\n영화 예매권\n다음 기회에';
+  // init — 참가자 14명 / 선물 6개(갯수만큼), 한 번에 매칭 모드로 바로 준비
+  peopleEl.value = [
+    '이흥수', '장하나', '이주나', '강정', '김혜숙', '문주현', '김규태',
+    '김지선', '김종윤', '최자경', '정승원', '한자영', '양미란', '이문영',
+  ].join('\n');
+  prizesEl.value = [
+    '캔바X팀에듀케이터 티셔츠',
+    '캔바X팀에듀케이터 티셔츠',
+    '레드멘타 에코백',
+    '레드멘타 에코백',
+    '꿈돌이 명함케이스',
+    '캔바 머그컵',
+  ].join('\n');
   rebuildOrder();
   refresh();
+  // '한 번에 매칭' 모드로 전환해 바로 돌릴 수 있게 (선물 부족분은 '다음 기회에')
+  document.querySelector('.mode-btn[data-mode="match"]').click();
 })();
 </script>
 </body>
