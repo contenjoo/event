@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>선생님들의 미래교실 별자리</title>
+<style>
+  :root {
+    --bg: #0a0d1f;
+    --bg2: #141a3a;
+    --text: #eef1ff;
+    --muted: #9aa3cf;
+    --gold: #ffd36e;
+    --accent: #ff5d8f;
+    --accent-2: #6c5ce7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(1400px 800px at 50% -10%, #232a55 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    -webkit-user-select: none; user-select: none; cursor: none;
+  }
+  #sky { position: fixed; inset: 0; z-index: 1; }
+
+  .overlay { position: fixed; inset: 0; z-index: 2; pointer-events: none; display: flex; flex-direction: column; }
+
+  header.title {
+    text-align: center; padding: 4.5vh 4vw 0;
+  }
+  header.title .kicker {
+    font-size: clamp(13px, 1.4vw, 22px); font-weight: 800; letter-spacing: .35em;
+    color: var(--gold); opacity: .85;
+  }
+  header.title h1 {
+    margin-top: 1.4vh; font-size: clamp(28px, 4vw, 68px); letter-spacing: -.02em;
+    font-weight: 900; line-height: 1.05;
+    background: linear-gradient(120deg, var(--gold), var(--accent) 60%, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header.title .sub { margin-top: 1.2vh; font-size: clamp(13px, 1.5vw, 24px); color: var(--muted); font-weight: 600; }
+
+  footer.counter { margin-top: auto; text-align: center; padding: 0 4vw 5vh; }
+  footer.counter .label { font-size: clamp(14px, 1.6vw, 26px); color: var(--muted); font-weight: 600; }
+  footer.counter .num {
+    display: block; margin-top: .4vh;
+    font-size: clamp(60px, 12vw, 200px); font-weight: 900; line-height: 1;
+    letter-spacing: -.03em;
+    background: linear-gradient(180deg, #fff, var(--gold));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 60px rgba(255,211,110,.25);
+    font-variant-numeric: tabular-nums;
+  }
+  footer.counter .num .unit { font-size: .32em; color: var(--muted); -webkit-text-fill-color: var(--muted); margin-left: .1em; }
+
+  /* new-star toast */
+  #toast {
+    position: fixed; left: 50%; top: 50%; z-index: 3; transform: translate(-50%, -50%) scale(.6);
+    padding: 2.2vh 3.4vw; border-radius: 999px;
+    background: rgba(20, 26, 58, .82); border: 1.5px solid var(--gold);
+    box-shadow: 0 0 50px rgba(255,211,110,.4), inset 0 0 30px rgba(255,211,110,.1);
+    font-size: clamp(16px, 2.1vw, 34px); font-weight: 800; color: var(--text);
+    opacity: 0; pointer-events: none; white-space: nowrap;
+    backdrop-filter: blur(6px);
+  }
+  #toast b { color: var(--gold); }
+  #toast.show { animation: toastpop 3.2s cubic-bezier(.2,1.2,.3,1) forwards; }
+  @keyframes toastpop {
+    0%   { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
+    12%  { opacity: 1; transform: translate(-50%,-50%) scale(1.05); }
+    20%  { transform: translate(-50%,-50%) scale(1); }
+    82%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%,-52%) scale(.98); }
+  }
+
+  /* demo badge */
+  #demoBadge {
+    position: fixed; right: 14px; bottom: 12px; z-index: 5;
+    font-size: 12px; color: var(--muted); background: rgba(20,26,58,.7);
+    border: 1px solid rgba(154,163,207,.3); border-radius: 8px; padding: 5px 10px;
+    pointer-events: none; letter-spacing: .04em;
+  }
+  #hint {
+    position: fixed; left: 14px; bottom: 12px; z-index: 5;
+    font-size: 12px; color: var(--muted); opacity: .5; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+
+<div class="overlay">
+  <header class="title">
+    <div class="kicker">2026 AI 활용 교육 콘퍼런스 · with 오늘배움</div>
+    <h1>선생님들의 미래교실 별자리</h1>
+    <div class="sub">선생님 한 분이 수업의 별 하나를 밝힙니다</div>
+  </header>
+  <footer class="counter">
+    <div class="label">오늘 선생님들이 밝힌 수업의 가능성</div>
+    <div class="num"><span id="countNum">0</span><span class="unit">개</span></div>
+  </footer>
+</div>
+
+<div id="toast"></div>
+<div id="demoBadge">DEMO</div>
+<div id="hint">space: 별 추가 · D: 데모 끔/켬 · F11: 전체화면</div>
+
+<script>
+(() => {
+  // ================= CONFIG =================
+  // 게임(stars.html)과 같은 Apps Script 웹 앱 URL.
+  const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyUyqugG6Q4snJl1tuy64N4j_6_6FkIZ1v29beGZfJ1cyCaNl3zektciC1eBPw2Qp5ekA/exec';
+
+  // 로컬 미리보기용. true면 서버 없이 별이 저절로 늘어남.
+  // 실제 행사 땐 false로 바꾸고 Apps Script를 ?action=count 지원 버전으로 재배포하세요.
+  let DEMO_MODE = true;
+
+  const POLL_MS = 4000;        // 실서비스: 카운트 폴링 간격
+  const DEMO_MIN_MS = 2500;    // 데모: 별 하나 자동 추가 최소 간격
+  const DEMO_MAX_MS = 6000;
+  const DEMO_START = 12;       // 데모 시작 별 개수
+  // ==========================================
+
+  const PALETTE = ['#ffd36e', '#ff5d8f', '#6c5ce7', '#38d39f', '#4dabf7', '#ffffff'];
+  const GOLDEN = Math.PI * (3 - Math.sqrt(5)); // 황금각 — 겹치지 않게 퍼짐
+
+  const sky = document.getElementById('sky');
+  const ctx = sky.getContext('2d');
+  const countNum = document.getElementById('countNum');
+  const toast = document.getElementById('toast');
+  const demoBadge = document.getElementById('demoBadge');
+
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    sky.width = Math.round(W * DPR); sky.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    computeAllTargets();
+  }
+  window.addEventListener('resize', resize);
+
+  // ---- 배경 잔별(장식) ----
+  const bgStars = [];
+  function seedBg() {
+    bgStars.length = 0;
+    const n = Math.round((W * H) / 9000);
+    for (let i = 0; i < n; i++) {
+      bgStars.push({
+        x: rand(i * 7.1) * W, y: rand(i * 3.3 + 1) * H,
+        r: rand(i * 1.7 + 2) * 1.1 + .3,
+        tw: rand(i * 2.9 + 4) * Math.PI * 2, sp: .4 + rand(i * 5.5) * 1.2,
+      });
+    }
+  }
+
+  // 결정적 난수 — 같은 index면 항상 같은 위치
+  function rand(seed) {
+    const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  // ---- 수업의 별 ----
+  const stars = [];   // { i, tx, ty, x, y, r, color, born, twPhase }
+  let count = 0;      // 현재 표시된 별 수
+
+  // 황금각 나선으로 화면을 고르게 채우는 목표 좌표
+  function targetFor(i) {
+    const cx = W / 2, cy = H / 2;
+    const margin = Math.min(W, H) * 0.06;
+    const maxR = Math.min(W * 0.46, H * 0.42);
+    const t = (i + 0.5);
+    const total = Math.max(count, 40);
+    const radius = maxR * Math.sqrt(t / total);
+    const ang = i * GOLDEN;
+    // 살짝 흔들어 기계적 나선 티 줄이기
+    const jx = (rand(i * 12.3) - .5) * margin;
+    const jy = (rand(i * 45.1) - .5) * margin;
+    return { x: cx + Math.cos(ang) * radius + jx, y: cy + Math.sin(ang) * radius + jy };
+  }
+  function computeAllTargets() {
+    for (const s of stars) {
+      const t = targetFor(s.i);
+      s.tx = t.x; s.ty = t.y;
+    }
+  }
+
+  function addStar(animated) {
+    const i = stars.length;
+    const t = targetFor(i);
+    const s = {
+      i, tx: t.x, ty: t.y,
+      x: animated ? W / 2 : t.x,
+      y: animated ? H / 2 : t.y,
+      r: 2.6 + rand(i * 9.9) * 2.8,
+      color: PALETTE[Math.floor(rand(i * 3.14) * PALETTE.length)],
+      born: performance.now(),
+      pop: animated ? 0 : 1,
+      twPhase: rand(i * 6.28) * Math.PI * 2,
+    };
+    stars.push(s);
+    count = stars.length;
+    computeAllTargets();
+    return s;
+  }
+
+  // ---- 새 별 등장 이벤트 ----
+  const bursts = [];
+  function celebrate(nth, star) {
+    bursts.push({ x: star.tx, y: star.ty, t0: performance.now(), color: star.color });
+    showToast(nth);
+    tickCounter(nth);
+    chime();
+  }
+  function showToast(nth) {
+    toast.innerHTML = `✨ 방금 <b>${nth.toLocaleString('ko-KR')}번째</b> 수업의 별이 켜졌습니다`;
+    toast.classList.remove('show'); void toast.offsetWidth; toast.classList.add('show');
+  }
+
+  // ---- 카운터 숫자 애니메이션 ----
+  let shownCount = 0, targetCount = 0;
+  function tickCounter(n) { targetCount = n; }
+  function drawCounter() {
+    if (shownCount !== targetCount) {
+      const diff = targetCount - shownCount;
+      shownCount += Math.sign(diff) * Math.max(1, Math.round(Math.abs(diff) / 8));
+      if (Math.abs(targetCount - shownCount) < 1) shownCount = targetCount;
+      countNum.textContent = shownCount.toLocaleString('ko-KR');
+    }
+  }
+
+  // ---- 렌더 루프 ----
+  function frame(now) {
+    ctx.clearRect(0, 0, W, H);
+
+    // 배경 잔별
+    for (const b of bgStars) {
+      const a = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(now * 0.001 * b.sp + b.tw));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#cdd6ff';
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 별자리 연결선(가까운 별끼리)
+    ctx.lineWidth = 1;
+    for (let i = 0; i < stars.length; i++) {
+      const a = stars[i];
+      for (let j = i + 1; j < Math.min(i + 4, stars.length); j++) {
+        const b = stars[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d = Math.hypot(dx, dy);
+        if (d < Math.min(W, H) * 0.13) {
+          ctx.strokeStyle = `rgba(255,211,110,${0.10 * (1 - d / (Math.min(W, H) * 0.13))})`;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+    }
+
+    // 수업의 별
+    for (const s of stars) {
+      // 목표로 부드럽게 이동
+      s.x += (s.tx - s.x) * 0.08;
+      s.y += (s.ty - s.y) * 0.08;
+      if (s.pop < 1) s.pop = Math.min(1, s.pop + 0.045);
+      const ease = 1 - Math.pow(1 - s.pop, 3);
+      const twinkle = 0.72 + 0.28 * Math.sin(now * 0.0022 + s.twPhase);
+      const r = s.r * ease * (0.9 + 0.1 * twinkle);
+      drawStar(s.x, s.y, r, s.color, twinkle * ease);
+    }
+
+    // 등장 링 버스트
+    for (let k = bursts.length - 1; k >= 0; k--) {
+      const bu = bursts[k];
+      const p = (now - bu.t0) / 900;
+      if (p >= 1) { bursts.splice(k, 1); continue; }
+      const rr = p * Math.min(W, H) * 0.09;
+      ctx.globalAlpha = (1 - p) * 0.9;
+      ctx.strokeStyle = bu.color; ctx.lineWidth = 2.5 * (1 - p) + 0.5;
+      ctx.beginPath(); ctx.arc(bu.x, bu.y, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    drawCounter();
+    requestAnimationFrame(frame);
+  }
+
+  function drawStar(x, y, r, color, glow) {
+    // 광채
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 4.5);
+    g.addColorStop(0, hexA(color, 0.55 * glow));
+    g.addColorStop(0.4, hexA(color, 0.14 * glow));
+    g.addColorStop(1, hexA(color, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r * 4.5, 0, Math.PI * 2); ctx.fill();
+    // 코어
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    // 십자 반짝임
+    ctx.strokeStyle = hexA(color, 0.5 * glow); ctx.lineWidth = 1;
+    const sp = r * 3.2;
+    ctx.beginPath();
+    ctx.moveTo(x - sp, y); ctx.lineTo(x + sp, y);
+    ctx.moveTo(x, y - sp); ctx.lineTo(x, y + sp);
+    ctx.stroke();
+  }
+
+  function hexA(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  // ---- 소리(부드러운 종소리) ----
+  let audioCtx = null;
+  function chime() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      [880, 1174.7, 1568].forEach((f, i) => {
+        const t = audioCtx.currentTime + i * 0.06;
+        const o = audioCtx.createOscillator(), gg = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        o.connect(gg); gg.connect(audioCtx.destination);
+        gg.gain.setValueAtTime(0.0001, t);
+        gg.gain.linearRampToValueAtTime(0.08, t + 0.02);
+        gg.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+        o.start(t); o.stop(t + 1);
+      });
+    } catch (_) {}
+  }
+
+  // ---- 별 늘리기(공통) ----
+  function growTo(newCount) {
+    if (newCount <= count) { if (newCount < count) { /* 서버가 줄면 무시 */ } return; }
+    // 한 번에 여러 개 늘면 순차 등장
+    let n = count;
+    const step = () => {
+      if (n >= newCount) return;
+      n++;
+      const s = addStar(true);
+      celebrate(n, s);
+      if (n < newCount) setTimeout(step, 700);
+    };
+    step();
+  }
+
+  function seedInitial(n) {
+    for (let i = 0; i < n; i++) addStar(false);
+    shownCount = targetCount = count;
+    countNum.textContent = count.toLocaleString('ko-KR');
+  }
+
+  // ---- 데이터 소스 ----
+  let demoTimer = null;
+  function scheduleDemo() {
+    clearTimeout(demoTimer);
+    if (!DEMO_MODE) return;
+    const wait = DEMO_MIN_MS + Math.random() * (DEMO_MAX_MS - DEMO_MIN_MS);
+    demoTimer = setTimeout(() => { growTo(count + 1); scheduleDemo(); }, wait);
+  }
+
+  async function pollReal() {
+    if (DEMO_MODE) return;
+    try {
+      const res = await fetch(SHEET_ENDPOINT + '?action=count', { cache: 'no-store' });
+      const d = await res.json();
+      if (d && d.ok && Number.isFinite(d.count)) growTo(Number(d.count));
+    } catch (_) { /* 네트워크 일시 오류 무시 */ }
+    setTimeout(pollReal, POLL_MS);
+  }
+
+  function applyMode() {
+    demoBadge.style.display = DEMO_MODE ? '' : 'none';
+    clearTimeout(demoTimer);
+    if (DEMO_MODE) scheduleDemo();
+    else pollReal();
+  }
+
+  // ---- 키 조작(현장 운영용) ----
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); growTo(count + 1); }
+    else if (e.key === 'd' || e.key === 'D') { DEMO_MODE = !DEMO_MODE; applyMode(); }
+  });
+  // 클릭으로도 오디오 활성화(브라우저 자동재생 정책)
+  window.addEventListener('pointerdown', () => { if (!audioCtx) chime(); }, { once: true });
+
+  // ---- 시작 ----
+  resize();
+  seedBg();
+  if (DEMO_MODE) seedInitial(DEMO_START);
+  applyMode();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

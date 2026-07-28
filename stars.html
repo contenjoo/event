@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>2026 쉐어워즈 — 디지로그, 나만의 수업 속도를 찾아서</title>
+<title>2026 AI 활용 교육 콘퍼런스 — 수업의 별 찾기</title>
 <style>
   :root {
     --bg: #0f1226;
@@ -242,9 +242,9 @@
 </head>
 <body>
 <header>
-  <div class="year">2026</div>
-  <h1>쉐어워즈</h1>
-  <p class="sub">디지로그, 나만의 수업 속도를 찾아서</p>
+  <div class="year">2026 AI 활용 교육 콘퍼런스</div>
+  <h1>수업의 별 찾기</h1>
+  <p class="sub">AI 도구로 여는 나만의 미래교실</p>
   <p class="with">with <b>오늘배움</b></p>
 </header>
 
@@ -254,8 +254,8 @@
     <!-- STEP 1: choose tools (multi) -->
     <section class="step on" id="stepTools">
       <div class="step-label">STEP 1 / 3</div>
-      <h2>받고 싶은 툴을 <b>모두</b> 골라주세요</h2>
-      <p class="lead">여러 개 선택할 수 있어요. 체험 기간은 복권에서 결정돼요!</p>
+      <h2>오늘, 어떤 수업을 더 <b>빛나게</b> 하고 싶으세요?</h2>
+      <p class="lead" id="toolLead">함께할 도구를 최대 2개까지 골라주세요.</p>
       <div id="toolList"></div>
       <button class="btn" id="proceedBtn" disabled>툴을 먼저 선택해 주세요</button>
     </section>
@@ -263,15 +263,15 @@
     <!-- STEP 2: scratch prizes -->
     <section class="step" id="stepScratch">
       <div class="step-label">STEP 2 / 3</div>
-      <h2>복권을 긁어 <b>당첨 경품</b>을 확인해요!</h2>
-      <p class="lead">같은 그림 3개를 찾아 당첨 경품을 모두 확인하세요!</p>
+      <h2>은박 아래 숨은 <b>수업의 별</b>을 찾아주세요</h2>
+      <p class="lead">칸을 살살 긁으면 수업 아이콘이 나타나요. 같은 별 3개를 찾으면 완성!</p>
       <div class="picked">
         <span id="pickedLabel"></span>
         <span class="re" id="repick">다시 선택</span>
       </div>
       <div class="scratch-zone">
         <div class="ticket" id="ticket">
-          <div class="ticket-title">✨ 행운의 즉석복권 ✨</div>
+          <div class="ticket-title">✨ 수업의 별 찾기 ✨</div>
           <div class="cells" id="cells"></div>
         </div>
         <div class="match-status" id="matchStatus"></div>
@@ -283,8 +283,8 @@
     <!-- STEP 3: form -->
     <section class="step" id="stepForm">
       <div class="step-label">STEP 3 / 3</div>
-      <h2>경품 받을 정보를 알려주세요</h2>
-      <div class="prize-summary">🎁 <span><b id="summaryText"></b> 당첨!</span></div>
+      <h2>찾은 별을 보내드릴 곳을 알려주세요</h2>
+      <div class="prize-summary">🌟 <span><b id="summaryText"></b></span></div>
       <form id="entryForm" novalidate>
         <label for="fName">이름</label>
         <input id="fName" name="name" autocomplete="name" maxlength="80" placeholder="홍길동" required />
@@ -315,8 +315,8 @@
     <!-- DONE -->
     <section class="step" id="stepDone">
       <div class="done-box">
-        <div class="big-emoji">📬</div>
-        <h2>신청 완료!</h2>
+        <div class="big-emoji">⭐</div>
+        <h2>별이 켜졌어요!</h2>
         <p id="doneText"></p>
       </div>
     </section>
@@ -326,7 +326,7 @@
 
 <canvas id="confetti"></canvas>
 <div id="flash"></div>
-<footer>2026 쉐어워즈 · with 오늘배움</footer>
+<footer>2026 AI 활용 교육 콘퍼런스 · with 오늘배움</footer>
 
 <script>
 (() => {
@@ -335,17 +335,17 @@
   const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyUyqugG6Q4snJl1tuy64N4j_6_6FkIZ1v29beGZfJ1cyCaNl3zektciC1eBPw2Qp5ekA/exec';
 
   const TOOLS = [
-    { id: 'Snorkl',   emoji: '🎤', desc: '학생의 생각을 음성·화이트보드로 녹화하고 AI 피드백까지' },
-    { id: 'Redmenta', emoji: '📝', desc: 'AI로 워크시트·퀴즈를 뚝딱 만드는 스마트 학습지 플랫폼' },
-    { id: 'Mizou',    emoji: '🤖', desc: '우리 반 맞춤 교육용 AI 챗봇을 직접 만드는 플랫폼' },
+    { id: 'Snorkl',   emoji: '🎤', desc: '학생의 생각을 보여주고 싶어요 · 음성·화이트보드 녹화 + AI 피드백' },
+    { id: 'Redmenta', emoji: '📝', desc: '수업 준비와 평가를 가볍게 하고 싶어요 · AI 워크시트·퀴즈' },
+    { id: 'Mizou',    emoji: '🤖', desc: '학생과 즐겁게 대화하고 싶어요 · 우리 반 맞춤 교육용 AI 챗봇' },
   ];
 
   // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
   // 현재: 30일 72% / 60일 20% / 90일 8%
   const PERIODS = [
-    { type: 'period', days: 30, emoji: '🥉', weight: 72 },
-    { type: 'period', days: 60, emoji: '🥈', weight: 20 },
-    { type: 'period', days: 90, emoji: '🥇', weight: 8 },
+    { type: 'period', days: 30, emoji: '🌱', name: '새로운 시작의 별', short: '새 시작', weight: 72 },
+    { type: 'period', days: 60, emoji: '🌿', name: '성장의 별',       short: '성장',   weight: 20 },
+    { type: 'period', days: 90, emoji: '🌟', name: '빛나는 수업의 별', short: '빛나는 별', weight: 8 },
   ];
 
   // 특별상 — 기간 당첨에 "추가로" 붙는 보너스 (독립 확률).
@@ -353,12 +353,12 @@
   //  · 주이즈: 어떤 툴을 골랐든 항상 보너스 후보
   //  · Snorkl 과제 +10: Snorkl을 선택했을 때만 보너스 후보
   const SPECIALS = [
-    { emoji: '👑', short: '주이즈 1년', full: '주이즈 1년 이용권',    chance: 0.25, always: true },
-    { emoji: '✏️', short: '과제 +10',  full: 'Snorkl 과제 10개 추가', chance: 0.40, requiresTool: 'Snorkl' },
+    { emoji: '☄️', short: '별똥별', full: '주이즈 1년 이용권',    chance: 0.25, always: true },
+    { emoji: '💫', short: '별똥별', full: 'Snorkl 과제 10개 추가', chance: 0.40, requiresTool: 'Snorkl' },
   ];
 
-  // 복권 채우기용 중립(행운) 심볼 — 당첨과 무관, 니어미스 재미용
-  const DECOYS = ['🍀', '⭐', '🔔', '🍒', '🎀', '🌈', '🍭'];
+  // 복권 채우기용 수업 아이콘 — 당첨과 무관, 발견의 재미용
+  const DECOYS = ['⭐', '✏️', '💬', '💡', '📚', '🍎', '🌈'];
   // ==========================================
 
   const $ = (s) => document.querySelector(s);
@@ -450,10 +450,23 @@
     toolList.appendChild(b);
   });
 
+  const MAX_TOOLS = 2;
+  const LEAD_DEFAULT = '함께할 도구를 최대 2개까지 골라주세요.';
+  function flashLimit() {
+    const lead = $('#toolLead');
+    lead.textContent = `최대 ${MAX_TOOLS}개까지만 고를 수 있어요 🙂`;
+    lead.style.color = 'var(--accent)';
+    clearTimeout(flashLimit.t);
+    flashLimit.t = setTimeout(() => { lead.textContent = LEAD_DEFAULT; lead.style.color = ''; }, 1400);
+  }
+
   function toggleTool(id, el) {
     const i = state.tools.indexOf(id);
     if (i >= 0) { state.tools.splice(i, 1); el.classList.remove('sel'); }
-    else { state.tools.push(id); el.classList.add('sel'); }
+    else {
+      if (state.tools.length >= MAX_TOOLS) { flashLimit(); return; }
+      state.tools.push(id); el.classList.add('sel');
+    }
     const n = state.tools.length;
     const btn = $('#proceedBtn');
     btn.disabled = n === 0;
@@ -466,7 +479,7 @@
     state.tools = TOOLS.map(t => t.id).filter(id => state.tools.includes(id));
     const btn = $('#proceedBtn');
     btn.disabled = true;
-    btn.textContent = '복권을 준비하는 중…';
+    btn.textContent = '별을 준비하는 중…';
     try {
       const draw = await requestDraw();
       state.drawToken = draw.token;
@@ -482,7 +495,7 @@
         ? '잠시 후 다시 시도해 주세요'
         : err.code === 'backend_outdated'
           ? '이벤트 서버 업데이트 중 — 잠시 후 다시 시도'
-          : '복권 준비에 실패했어요 — 다시 시도';
+          : '별 준비에 실패했어요 — 다시 시도';
     }
   });
 
@@ -517,6 +530,8 @@
 
   function buildTicket(draw) {
     won = false;
+    const oldReveal = document.getElementById('prizeReveal');
+    if (oldReveal) oldReveal.remove();
     renderOdds();
     state.period = PERIODS.find(p => p.days === Number(draw.days));
     const specialSet = new Set(draw.specials);
@@ -527,11 +542,11 @@
     stopHeartbeat();
     ticket.classList.remove('suspense', 'revealed');
     claimBtn.style.display = 'none';
-    setStatus('🪙 은박을 긁어서 같은 그림 3개를 찾아보세요!');
+    setStatus('✨ 은박을 살살 긁어서 같은 별 3개를 찾아보세요!');
 
     // 기간과 서버에서 당첨된 특별 보너스를 각각 3칸씩 넣어 실제 긁기로 공개합니다.
     const prizeSymbols = [
-      { key: state.period.emoji, label: `${state.period.days}일` },
+      { key: state.period.emoji, label: state.period.short },
       ...state.bonuses.map(s => ({ key: s.emoji, label: s.short })),
     ];
     const layout = buildTicketLayout(prizeSymbols);
@@ -560,10 +575,10 @@
     const fillers = shuffleArr([
       ...PERIODS
         .filter(p => !prizeKeys.has(p.emoji))
-        .map(p => ({ key: p.emoji, label: `${p.days}일` })),
+        .map(p => ({ key: p.emoji, label: p.short })),
       ...DECOYS
         .filter(emoji => !prizeKeys.has(emoji))
-        .map(emoji => ({ key: emoji, label: '행운' })),
+        .map(emoji => ({ key: emoji, label: '수업' })),
     ]);
 
     let remaining = 12 - layout.length;
@@ -655,11 +670,10 @@
       .map(([, count]) => count);
     const best = unmatchedCounts.length ? Math.max(...unmatchedCounts) : 0;
     if (best === 2) {
-      setStatus('🔥 같은 그림 2개!! 하나만 더 나오면 당첨… 두근두근!', true);
-      ticket.classList.add('suspense');
-      startHeartbeat();
+      setStatus('⭐ 두 개 찾았어요! 마지막 별이 가까워요', true);
+      sparkleSound();
     } else {
-      setStatus(`${cell.key} 발견! 같은 그림을 계속 찾아보세요`);
+      setStatus(`${cell.key} 발견! 수업의 별을 계속 찾아보세요`);
     }
   }
 
@@ -673,11 +687,11 @@
 
     const bonus = state.bonuses.find(item => item.emoji === key);
     const message = bonus
-      ? `🎊 ${bonus.emoji} ${bonus.full} 당첨!`
-      : `🎉 ${state.period.emoji} ${state.period.days}일 무료 체험 당첨!`;
+      ? `☄️ 별똥별을 찾았어요 — ${bonus.full}!`
+      : `${state.period.emoji} ${state.period.name}을 찾았어요!`;
 
     if (foundWinningKeys.size < winningKeys.size) {
-      setStatus(`${message} 다른 당첨 그림도 계속 찾아보세요`, true);
+      setStatus(`${message} 남은 별도 찾아보세요`, true);
       return;
     }
     finishTicket();
@@ -687,7 +701,7 @@
     won = true;
     stopHeartbeat();
     ticket.classList.remove('suspense');
-    setStatus('당첨 결과를 확인하는 중…', true);
+    setStatus('수업의 별을 모으는 중…', true);
     riserSound();
 
     setTimeout(() => {
@@ -701,11 +715,13 @@
       confettiBurst();
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
       const prizes = [
-        `${state.period.emoji} ${state.period.days}일 무료 체험`,
+        `${state.period.emoji} ${state.period.name} (${state.tools.join('·')} ${state.period.days}일)`,
         ...state.bonuses.map(s => `${s.emoji} ${s.full}`),
       ];
-      setStatus(`🎉 ${prizes.join(' + ')} 당첨!`, true);
-      claimBtn.textContent = '🎁 경품 받기';
+      setStatus('🌟 선생님의 수업에 새로운 가능성이 열렸어요!', true);
+      matchStatus.insertAdjacentHTML('afterend',
+        `<div id="prizeReveal" style="text-align:center;margin-top:6px;font-size:13.5px;color:var(--gold);font-weight:700;line-height:1.6;">${prizes.join('<br/>')}</div>`);
+      claimBtn.textContent = '✨ 내 별 켜기';
       claimBtn.style.display = '';
     }, 1000);
   }
@@ -719,7 +735,7 @@
     if ($('#stepScratch').classList.contains('on')) cells.filter(c => !c.opened).forEach(paintCellFoil);
   });
 
-  // 최종 경품 문구: "선택 툴 기간 무료 체험" + 보너스 특별상들
+  // 실제 저장용 경품 문구(서버 결과) — 화면엔 별 이름으로 보여줍니다.
   function prizeText() {
     if (state.serverPrize) return state.serverPrize;
     const base = `${state.tools.join(' · ')} ${state.period.days}일 무료 체험`;
@@ -727,8 +743,15 @@
     return base + ' + ' + state.bonuses.map(s => s.full).join(' + ');
   }
 
+  // 별 이름으로 꾸민 경품 표시 문구
+  function prizeStars() {
+    const parts = [`${state.period.emoji} ${state.period.name} · ${state.tools.join('·')} ${state.period.days}일 이용권`];
+    state.bonuses.forEach(s => parts.push(`${s.emoji} ${s.full}`));
+    return parts.join('  +  ');
+  }
+
   claimBtn.addEventListener('click', () => {
-    $('#summaryText').textContent = `🎓 ${prizeText()}`;
+    $('#summaryText').textContent = prizeStars();
     show('#stepForm');
     $('#fName').focus();
   });
@@ -760,7 +783,7 @@
     ok = ok && email2Ok;
     if (!ok) return;
     if (!state.drawToken) {
-      $('#eEmail').textContent = '복권 정보가 만료됐어요. 처음부터 다시 선택해 주세요.';
+      $('#eEmail').textContent = '별 찾기 정보가 만료됐어요. 처음부터 다시 시작해 주세요.';
       return;
     }
     const early = $('#fEarly').checked;
@@ -794,18 +817,19 @@
       }
       state.submitted = true;
       $('#doneText').innerHTML =
-        `<b>${escapeHtml(name)}</b> 선생님, <b>${escapeHtml(prizeText())}</b> 신청이 접수됐어요.<br/>` +
+        `<b>${escapeHtml(name)}</b> 선생님의 별이 <b>미래교실</b>에 켜졌습니다. ✨<br/>` +
+        `<b>${escapeHtml(prizeStars())}</b><br/><br/>` +
         `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 ` +
         (early
           ? `<b>미리 받기</b> 요청이 접수되어 <b>다음 주 월요일</b>에 먼저 보내드릴게요! ⚡`
-          : `<b>8월 19일</b>에 일괄 발송해 드릴게요!`) +
-        `<br/><br/><span class="check-email">📧 경품 안내 메일을 꼭 확인해 주세요!<br/>(스팸함도 함께 확인해 주세요)</span>`;
+          : `<b>8월 19일</b>에 보내드릴게요!`) +
+        `<br/><br/><span class="check-email">📧 안내 메일을 꼭 확인해 주세요!<br/>(스팸함도 함께 확인해 주세요)</span>`;
       show('#stepDone');
       confettiBurst();
     } catch (err) {
       btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
       $('#eEmail').textContent = ['draw_expired', 'invalid_token'].includes(err.code)
-        ? '복권 정보가 만료됐어요. 처음부터 다시 선택해 주세요.'
+        ? '별 찾기 정보가 만료됐어요. 처음부터 다시 시작해 주세요.'
         : '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
       return;
     }
@@ -837,6 +861,8 @@
   }
   function tickSound() { blip(2400 + Math.random() * 800, 0.02, 'square', 0.03); }
   function popSound() { blip(660, 0.12, 'triangle', 0.18); blip(990, 0.1, 'triangle', 0.12, 0.06); }
+  // 두 개 찾았을 때 — 도박 같은 심박음 대신 부드러운 반짝임
+  function sparkleSound() { blip(1320, 0.14, 'sine', 0.12); blip(1760, 0.18, 'sine', 0.1, 0.08); blip(2093, 0.2, 'sine', 0.08, 0.16); }
   function riserSound() { for (let i = 0; i < 9; i++) blip(280 + i * 95, 0.08, 'sawtooth', 0.07, i * 0.1); }
   function playFanfare() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => blip(f, 0.32, 'triangle', 0.2, i * 0.12)); }
 

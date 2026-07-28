@@ -1,11 +1,12 @@
 /**
- * 2026 쉐어워즈 (with 오늘배움) — 안전한 응모 저장용 Google Apps Script
+ * 2026 AI 활용 교육 콘퍼런스 (with 오늘배움) — 안전한 응모 저장용 Google Apps Script
  *
  * 배포:
  * 1. Google Sheet의 [확장 프로그램] → [Apps Script]에 이 파일을 붙여넣습니다.
  * 2. [배포] → [새 배포] → 유형 "웹 앱"을 선택합니다.
  * 3. 실행 계정은 소유자, 액세스 권한은 "모든 사용자"로 설정합니다.
- * 4. 배포 URL을 scratch.html의 SHEET_ENDPOINT에 설정합니다.
+ * 4. 배포 URL을 stars.html의 SHEET_ENDPOINT에 설정합니다.
+ *    TV 별자리(constellation.html)는 같은 URL에 ?action=count 로 접수 건수를 조회합니다.
  * 5. 반드시 Apps Script를 먼저 배포한 뒤 정적 HTML을 배포합니다.
  *    프론트는 EVENT_API_V2 마커가 확인될 때만 응모 POST를 전송합니다.
  *
@@ -22,6 +23,7 @@ var API_MARKER = 'EVENT_API_V2';
 var SHEET_HEADERS = ['접수시각', '이름', '학교', '이메일', '선택 툴', '체험 기간(일)', '특별상 보너스', '당첨 경품', '미리받기'];
 var TOKEN_SHEET_HEADERS = ['토큰', '생성시각', '클라이언트ID', '선택 툴(JSON)', '체험 기간(일)', '특별상(JSON)', '당첨 경품', '사용시각'];
 var TOOL_IDS = ['Snorkl', 'Redmenta', 'Mizou'];
+var MAX_TOOLS = 2; // 선생님 1인당 최대 선택 도구 수
 var PERIODS = [
   { days: 30, weight: 72 },
   { days: 60, weight: 20 },
@@ -172,7 +174,7 @@ function parseTools(raw) {
     return value.trim();
   }).filter(Boolean);
 
-  if (values.length < 1 || values.length > TOOL_IDS.length) return null;
+  if (values.length < 1 || values.length > MAX_TOOLS) return null;
 
   var seen = {};
   for (var i = 0; i < values.length; i++) {
@@ -323,8 +325,20 @@ function json(obj) {
 }
 
 // 상태 확인용 응답에는 배포 버전이나 내부 정보를 노출하지 않습니다.
-function doGet() {
+// ?action=count 는 TV 별자리 화면용으로 접수 건수만 반환합니다(개인정보 없음).
+function doGet(e) {
+  var p = (e && e.parameter) || {};
+  if (String(p.action || '').trim() === 'count') {
+    return json({ ok: true, count: countEntries() });
+  }
   return ContentService.createTextOutput(API_MARKER);
+}
+
+function countEntries() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (!sheet) return 0;
+  var last = sheet.getLastRow();
+  return last > 1 ? last - 1 : 0;
 }
 
 // Apps Script 편집기에서 실행할 수 있는 추첨 테스트입니다. 토큰 시트에 테스트 행이 추가됩니다.

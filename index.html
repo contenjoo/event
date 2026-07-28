@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>🎪 이벤트 광장</title>
+<title>2026 AI 활용 교육 콘퍼런스</title>
 <style>
   :root {
     --bg: #0f1226;
@@ -24,9 +24,15 @@
     color: var(--text);
     min-height: 100vh;
   }
-  header { text-align: center; padding: 44px 16px 10px; }
-  header h1 { margin: 0; font-size: 32px; letter-spacing: -0.5px; }
-  header p { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+  header { text-align: center; padding: 46px 16px 10px; }
+  header .kicker { font-size: 13px; font-weight: 800; letter-spacing: 3px; color: var(--accent); }
+  header h1 {
+    margin: 6px 0 0; font-size: 30px; letter-spacing: -0.5px;
+    background: linear-gradient(120deg, var(--gold), var(--accent) 60%, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header p { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+  header p b { color: var(--text); }
 
   .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px; }
 
@@ -43,7 +49,7 @@
   }
   a.event:hover { border-color: var(--accent-2); transform: translateY(-2px); }
   a.event:active { transform: translateY(1px); }
-  .event .logo { font-size: 40px; }
+  .event .logo { font-size: 40px; flex: 0 0 auto; }
   .event .name { font-size: 19px; font-weight: 800; }
   .event .desc { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
   .event .go { margin-left: auto; color: var(--accent); font-size: 22px; }
@@ -59,30 +65,31 @@
 </head>
 <body>
 <header>
-  <h1>🎪 이벤트 광장</h1>
-  <p>참여할 이벤트를 선택하세요!</p>
+  <div class="kicker">2026 AI 활용 교육 콘퍼런스</div>
+  <h1>수업의 별 광장</h1>
+  <p>참여할 이벤트를 선택하세요 · with <b>오늘배움</b></p>
 </header>
 
 <div class="wrap">
-  <a class="event" href="/scratch.html">
-    <span class="logo">🎫</span>
+  <a class="event" href="/stars.html">
+    <span class="logo">✨</span>
     <span>
-      <span class="name">2026 쉐어워즈<span class="badge">NEW</span></span>
-      <div class="desc">디지로그, 나만의 수업 속도를 찾아서 · with 오늘배움 — 즉석복권 긁고 주이즈·Snorkl·콤보 경품 받기!</div>
+      <span class="name">수업의 별 찾기<span class="badge">참여</span></span>
+      <div class="desc">은박을 긁어 나만의 수업 별을 찾아요. AI 도구를 고르고 별 3개를 맞추면 체험 이용권 당첨!</div>
     </span>
     <span class="go">›</span>
   </a>
 
-  <a class="event" href="/roulette.html">
-    <span class="logo">🎁</span>
+  <a class="event" href="/constellation.html">
+    <span class="logo">🌌</span>
     <span>
-      <span class="name">오늘부터 캔바</span>
-      <div class="desc">돌림판 룰렛으로 당첨자·경품 추첨 — 한 명씩 뽑기, 한 번에 매칭 지원</div>
+      <span class="name">미래교실 별자리<span class="badge">TV</span></span>
+      <div class="desc">선생님들이 밝힌 수업의 별이 실시간으로 켜지는 대형 화면. 행사장 TV 전시용.</div>
     </span>
     <span class="go">›</span>
   </a>
 </div>
 
-<footer>🎪 이벤트 광장</footer>
+<footer>2026 AI 활용 교육 콘퍼런스 · with 오늘배움</footer>
 </body>
 </html>
