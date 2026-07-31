@@ -333,7 +333,7 @@
 
       <div class="notice">
         ⚠️ <b>“지금 시작하기”</b>를 누르면 체험이 바로 시작돼요.<br/>
-        나중에 쓰실 거면 <b>저장·복사</b>만 해두세요.<br/>
+        링크는 <b>한 번만</b> 사용할 수 있어요. 나중에 쓰실 거면 <b>저장·복사</b>만 해두세요.<br/>
         링크가 안 열리는 등 문제가 있으면 <b>joo@learntoday.kr</b> 로 문의해 주세요.
       </div>
     </section>
@@ -832,7 +832,7 @@
   }
 
   async function shareLink(item, btn) {
-    const text = `${item.title} 체험권\n${item.url}\n문제가 있으면 joo@learntoday.kr 로 문의해 주세요.`;
+    const text = `${item.title} 체험권\n${item.url}\n이 링크는 한 번만 사용할 수 있어요.\n문제가 있으면 joo@learntoday.kr 로 문의해 주세요.`;
     if (navigator.share) {
       try { await navigator.share({ title: `${item.title} 체험권`, text, url: item.url }); }
       catch (_) {}
@@ -875,6 +875,7 @@
     let fs = 20; do { x.font = `700 ${fs}px monospace`; fs -= 1; } while (x.measureText(item.url).width > w - 70 && fs > 10);
     x.fillText(item.url, w / 2, 245);
     x.fillStyle = '#9aa3cf'; x.font = '600 13px sans-serif';
+    x.fillText('이 링크는 한 번만 사용할 수 있어요', w / 2, h - 80);
     x.fillText('링크가 안 되면 joo@learntoday.kr 로 문의해 주세요', w / 2, h - 58);
     x.fillText('with 오늘배움', w / 2, h - 32);
     const a = document.createElement('a');
