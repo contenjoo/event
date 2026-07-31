@@ -761,10 +761,15 @@
         60: 'https://app.redmenta.com/inv/keris60',
         90: 'https://app.redmenta.com/inv/keris90',
       },
-      Mizou: { 30: '', 60: '', 90: '' },   // 링크 준비 중
+      // Mizou는 신청 페이지 접수 후 당첨 기간에 맞춰 발급됩니다.
+      Mizou: {
+        30: 'https://www.learntoday.co.kr/mizou',
+        60: 'https://www.learntoday.co.kr/mizou',
+        90: 'https://www.learntoday.co.kr/mizou',
+      },
     },
     bonuses: {
-      '주이즈 1년 이용권': '',                        // 링크 준비 중
+      '주이즈 1년 이용권': 'booth',                   // 부스에서 직접 지급
       'Snorkl 과제 10개 추가': 'https://go.snorkl.app/superstars',
     },
   };
@@ -774,7 +779,10 @@
     const items = state.tools.map(id => {
       const t = TOOLS.find(x => x.id === id);
       const url = (REDEEM.tools[id] || {})[days] || '';
-      return { emoji: t ? t.emoji : '🎁', title: `${id} ${state.period.name}`, url };
+      const note = id === 'Mizou'
+        ? '신청 페이지에서 접수하시면 당첨 기간에 맞춰 계정을 만들어 드려요.'
+        : '';
+      return { emoji: t ? t.emoji : '🎁', title: `${id} ${state.period.name}`, url, note };
     });
     state.bonuses.forEach(s => {
       items.push({ emoji: '☄️', title: `별똥별 · ${s.full}`, url: REDEEM.bonuses[s.full] || '' });
@@ -788,16 +796,19 @@
     redeemItems().forEach(item => {
       const card = document.createElement('div');
       card.className = 'rcard';
-      if (!item.url) {
+      if (!item.url || item.url === 'booth') {
         card.innerHTML =
           `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
-          `<div class="rpending">🔧 링크 준비 중이에요 — 부스 직원에게 문의해 주세요.</div>`;
+          `<div class="rpending">${item.url === 'booth'
+            ? '🎫 이 화면(또는 저장한 쿠폰 이미지)을 부스 직원에게 보여주시면 바로 발급해 드려요.'
+            : '🔧 링크 준비 중이에요 — 부스 직원에게 문의해 주세요.'}</div>`;
         wrap.appendChild(card);
         return;
       }
       card.innerHTML =
         `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
         `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🚀 지금 시작하기 →</a>` +
+        (item.note ? `<div class="rpending" style="margin:0 0 8px;">💡 ${escapeHtml(item.note)}</div>` : '') +
         `<div class="rmini">` +
           `<button type="button" data-act="share">📤 폰에 저장</button>` +
           `<button type="button" data-act="copy">🔗 링크 복사</button>` +
