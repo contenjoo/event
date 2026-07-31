@@ -361,12 +361,18 @@
     demoTimer = setTimeout(() => { growTo(count + 1); scheduleDemo(); }, wait);
   }
 
+  let firstPoll = true;
   async function pollReal() {
     if (DEMO_MODE) return;
     try {
       const res = await fetch(SHEET_ENDPOINT + '?action=count', { cache: 'no-store' });
       const d = await res.json();
-      if (d && d.ok && Number.isFinite(d.count)) growTo(Number(d.count));
+      if (d && d.ok && Number.isFinite(d.count)) {
+        // 첫 조회는 조용히 채우고, 이후 증가분만 축하 연출
+        if (firstPoll) seedInitial(Number(d.count));
+        else growTo(Number(d.count));
+        firstPoll = false;
+      }
     } catch (_) { /* 네트워크 일시 오류 무시 */ }
     setTimeout(pollReal, POLL_MS);
   }
