@@ -271,6 +271,7 @@
   .rcard .rmini button.done { border-color: var(--good); color: var(--good); }
   .rcard .rurl { margin-top: 9px; font-size: 11.5px; color: var(--muted); word-break: break-all; text-align: center; }
   .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
+  .rcard .rabout { margin-top: 7px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
 
   canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 26px; }
@@ -351,10 +352,23 @@
   // Google Apps Script 웹 앱 URL (설정법: apps-script.gs 참고)
   const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyUyqugG6Q4snJl1tuy64N4j_6_6FkIZ1v29beGZfJ1cyCaNl3zektciC1eBPw2Qp5ekA/exec';
 
+  // desc: STEP 1 선택지(선생님 고민 문장) / about: 당첨 카드에서 보여줄 기능 소개
   const TOOLS = [
-    { id: 'Snorkl',   emoji: '🎤', desc: '학생의 생각을 보여주고 싶어요 · 음성·화이트보드 녹화 + AI 피드백' },
-    { id: 'Redmenta', emoji: '📝', desc: '수업 준비와 평가를 가볍게 하고 싶어요 · AI 워크시트·퀴즈' },
-    { id: 'Mizou',    emoji: '🤖', desc: '학생과 즐겁게 대화하고 싶어요 · 우리 반 맞춤 교육용 AI 챗봇' },
+    {
+      id: 'Snorkl', emoji: '🎤',
+      desc: '학생의 생각을 보여주고 싶어요 · 음성·화이트보드 녹화 + AI 피드백',
+      about: '학생이 말과 그림으로 생각을 설명하면 AI가 바로 피드백을 줘요. 모든 학생의 답을 한 화면에서 확인할 수 있어요.',
+    },
+    {
+      id: 'Redmenta', emoji: '📝',
+      desc: '수업 준비와 평가를 가볍게 하고 싶어요 · AI 워크시트·퀴즈',
+      about: '수업 자료나 주제만 넣으면 AI가 워크시트·퀴즈를 만들어 줘요. 채점과 결과 분석도 자동이에요.',
+    },
+    {
+      id: 'Mizou', emoji: '🤖',
+      desc: '학생과 즐겁게 대화하고 싶어요 · 우리 반 맞춤 교육용 AI 챗봇',
+      about: '우리 반 수업에 맞는 AI 챗봇을 직접 만들어요. 학생 대화 내용을 선생님이 확인할 수 있어 안전해요.',
+    },
   ];
 
   // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
@@ -783,7 +797,12 @@
       const note = id === 'Mizou'
         ? '신청 페이지에서 접수하시면 당첨 기간에 맞춰 계정을 만들어 드려요.'
         : '';
-      return { emoji: t ? t.emoji : '🎁', title: `${id} ${state.period.name}`, url, note };
+      return {
+        emoji: t ? t.emoji : '🎁',
+        title: `${id} ${state.period.name}`,
+        about: t ? t.about : '',
+        url, note,
+      };
     });
     state.bonuses.forEach(s => {
       items.push({ emoji: '☄️', title: `별똥별 · ${s.full}`, url: REDEEM.bonuses[s.full] || '' });
@@ -808,6 +827,7 @@
       }
       card.innerHTML =
         `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
+        (item.about ? `<div class="rabout">${escapeHtml(item.about)}</div>` : '') +
         `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🚀 지금 시작하기 →</a>` +
         (item.note ? `<div class="rpending" style="margin:0 0 8px;">💡 ${escapeHtml(item.note)}</div>` : '') +
         `<div class="rmini">` +
