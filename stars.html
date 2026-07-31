@@ -255,7 +255,7 @@
     <section class="step on" id="stepTools">
       <div class="step-label">STEP 1 / 3</div>
       <h2>오늘, 어떤 수업을 더 <b>빛나게</b> 하고 싶으세요?</h2>
-      <p class="lead" id="toolLead">함께할 도구를 최대 2개까지 골라주세요.</p>
+      <p class="lead" id="toolLead">함께할 도구를 골라주세요.</p>
       <div id="toolList"></div>
       <button class="btn" id="proceedBtn" disabled>툴을 먼저 선택해 주세요</button>
     </section>
@@ -451,7 +451,7 @@
   });
 
   const MAX_TOOLS = 2;
-  const LEAD_DEFAULT = '함께할 도구를 최대 2개까지 골라주세요.';
+  const LEAD_DEFAULT = '함께할 도구를 골라주세요.';
   function flashLimit() {
     const lead = $('#toolLead');
     lead.textContent = `최대 ${MAX_TOOLS}개까지만 고를 수 있어요 🙂`;
