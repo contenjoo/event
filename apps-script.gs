@@ -18,6 +18,7 @@
 
 var SHEET_NAME = '응모';
 var TOKEN_SHEET_NAME = '응모_토큰';
+var COUNTER_SHEET_NAME = '별_카운트'; // TV 별자리용 익명 참여 카운터 (개인정보 없음)
 var VERSION = 'security-v2';
 var API_MARKER = 'EVENT_API_V2';
 var SHEET_HEADERS = ['접수시각', '이름', '학교', '이메일', '선택 툴', '체험 기간(일)', '특별상 보너스', '당첨 경품', '미리받기'];
@@ -78,6 +79,7 @@ function handleDraw(p) {
   var specials = rollSpecials(tools);
   var prize = buildPrize(tools, period.days, specials);
   var token = Utilities.getUuid();
+  incrementStarCount(); // 별 찾기 시작 = TV 별자리 별 하나 (LockService 내부라 동시성 안전)
   tokenSheet.appendRow([
     token,
     now,
@@ -333,11 +335,32 @@ function doGet(e) {
   return ContentService.createTextOutput(API_MARKER);
 }
 
+// TV 별자리 카운트 — 익명 참여 카운터(별_카운트 시트 B1) 값.
 function countEntries() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COUNTER_SHEET_NAME);
   if (!sheet) return 0;
-  var last = sheet.getLastRow();
-  return last > 1 ? last - 1 : 0;
+  var value = Number(sheet.getRange(1, 2).getValue());
+  return isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function ensureCounterSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(COUNTER_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(COUNTER_SHEET_NAME);
+    sheet.getRange(1, 1).setValue('참여 수');
+    sheet.getRange(1, 2).setValue(0);
+    try { sheet.hideSheet(); } catch (_) {}
+  }
+  return sheet;
+}
+
+// handleDraw의 LockService 안에서만 호출 — 동시 증가 유실 없음.
+function incrementStarCount() {
+  var sheet = ensureCounterSheet();
+  var cell = sheet.getRange(1, 2);
+  var current = Number(cell.getValue());
+  cell.setValue((isFinite(current) && current > 0 ? Math.floor(current) : 0) + 1);
 }
 
 // Apps Script 편집기에서 실행할 수 있는 추첨 테스트입니다. 토큰 시트에 테스트 행이 추가됩니다.
