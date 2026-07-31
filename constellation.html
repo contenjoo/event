@@ -66,6 +66,42 @@
     font-size: clamp(13px, 1.35vw, 23px); font-weight: 600; line-height: 1.5;
   }
 
+  /* 가끔 한 번씩 전체 화면으로 크게 소개 */
+  .bigspot {
+    position: fixed; inset: 0; z-index: 4;
+    display: flex; align-items: center; justify-content: center;
+    padding: 6vh 6vw; text-align: center;
+    background: radial-gradient(900px 600px at 50% 40%, rgba(44, 52, 104, .96), rgba(10, 13, 31, .97));
+    opacity: 0; pointer-events: none; transition: opacity .8s ease;
+  }
+  .bigspot.on { opacity: 1; }
+  .bigspot .bs-inner { max-width: min(1200px, 92vw); transform: translateY(14px); transition: transform .8s ease; }
+  .bigspot.on .bs-inner { transform: none; }
+  .bigspot .bs-emoji { font-size: clamp(50px, 8vw, 130px); line-height: 1; }
+  .bigspot .bs-name {
+    margin-top: 1.6vh; font-size: clamp(34px, 5.6vw, 96px); font-weight: 900; letter-spacing: -.02em;
+    background: linear-gradient(120deg, var(--gold), var(--accent) 65%, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .bigspot .bs-tagline {
+    margin-top: 1vh; font-size: clamp(16px, 2.2vw, 38px); font-weight: 700; color: var(--text); opacity: .92;
+  }
+  .bigspot .bs-points {
+    list-style: none; margin: 4vh auto 0; display: inline-flex; flex-direction: column;
+    gap: 1.8vh; text-align: left;
+  }
+  .bigspot .bs-points li {
+    position: relative; padding-left: 1.6em;
+    font-size: clamp(15px, 1.9vw, 32px); font-weight: 600; color: var(--text); opacity: .9; line-height: 1.45;
+  }
+  .bigspot .bs-points li::before {
+    content: '✦'; position: absolute; left: 0; top: 0; color: var(--gold); opacity: .9;
+  }
+  .bigspot .bs-foot {
+    margin-top: 5vh; font-size: clamp(13px, 1.5vw, 26px); font-weight: 600; color: var(--muted);
+  }
+  .bigspot .bs-foot b { color: var(--gold); }
+
   footer.counter { text-align: center; padding: 3.2vh 4vw 5vh; }
   footer.counter .label { font-size: clamp(14px, 1.6vw, 26px); color: var(--muted); font-weight: 600; }
   footer.counter .num {
@@ -81,7 +117,7 @@
 
   /* new-star toast */
   #toast {
-    position: fixed; left: 50%; top: 50%; z-index: 3; transform: translate(-50%, -50%) scale(.6);
+    position: fixed; left: 50%; top: 50%; z-index: 6; transform: translate(-50%, -50%) scale(.6);
     padding: 2.2vh 3.4vw; border-radius: 999px;
     background: rgba(20, 26, 58, .82); border: 1.5px solid var(--gold);
     box-shadow: 0 0 50px rgba(255,211,110,.4), inset 0 0 30px rgba(255,211,110,.1);
@@ -138,6 +174,16 @@
   </footer>
 </div>
 
+<section class="bigspot" id="bigSpot" aria-hidden="true">
+  <div class="bs-inner">
+    <div class="bs-emoji" id="bsEmoji"></div>
+    <h2 class="bs-name" id="bsName"></h2>
+    <div class="bs-tagline" id="bsTagline"></div>
+    <ul class="bs-points" id="bsPoints"></ul>
+    <div class="bs-foot">📱 수업의 별을 찾고 <b>1~3개월 체험권</b>을 받아 가세요</div>
+  </div>
+</section>
+
 <div id="toast"></div>
 <div id="demoBadge">DEMO</div>
 <div id="hint">space: 별 추가 · D: 데모 끔/켬 · F11: 전체화면</div>
@@ -157,15 +203,38 @@
   const DEMO_MAX_MS = 6000;
   const DEMO_START = 12;       // 데모 시작 별 개수
 
-  // 화면 아래에서 돌아가는 도구 소개 (stars.html의 about 문구와 같은 내용)
-  const TOOL_ROTATE_MS = 7000;
+  // 도구 소개 — 평소엔 별자리 아래 작은 카드로 돌고, 몇 번에 한 번 전체 화면으로 크게.
+  const SMALL_MS = 7000;    // 작은 카드 한 장이 머무는 시간
+  const BIG_MS = 11000;     // 큰 화면 소개가 머무는 시간
+  const SMALL_BEFORE_BIG = 3; // 작게 3장 지나가면 한 번 크게
   const SHOWCASE = [
-    { emoji: '🎤', name: 'Snorkl',
-      desc: '학생이 말과 그림으로 생각을 설명하면 AI가 바로 피드백을 줘요. 모든 학생의 답을 한 화면에서 확인할 수 있어요.' },
-    { emoji: '📝', name: 'Redmenta',
-      desc: '수업 자료나 주제만 넣으면 AI가 워크시트·퀴즈를 만들어 줘요. 채점과 결과 분석도 자동이에요.' },
-    { emoji: '🤖', name: 'Mizou',
-      desc: '우리 반 수업에 맞는 AI 챗봇을 직접 만들어요. 학생 대화 내용을 선생님이 확인할 수 있어 안전해요.' },
+    {
+      emoji: '🎤', name: 'Snorkl', tagline: '학생의 생각이 보이는 수업',
+      desc: '학생이 말과 그림으로 생각을 설명하면 AI가 바로 피드백을 줘요.',
+      points: [
+        '학생이 화이트보드에 그리며 음성으로 설명해요',
+        'AI가 답변마다 즉시 피드백을 남겨줘요',
+        '우리 반 전체 답을 한 화면에서 비교해요',
+      ],
+    },
+    {
+      emoji: '📝', name: 'Redmenta', tagline: '수업 준비와 평가를 가볍게',
+      desc: '수업 자료나 주제만 넣으면 AI가 워크시트·퀴즈를 만들어 줘요.',
+      points: [
+        'PDF·링크·주제만 넣으면 학습지가 완성돼요',
+        '자동 채점으로 결과를 바로 확인해요',
+        '학생별 이해도를 한눈에 분석해 줘요',
+      ],
+    },
+    {
+      emoji: '🤖', name: 'Mizou', tagline: '우리 반 맞춤 AI 챗봇',
+      desc: '수업 목표에 맞는 AI 챗봇을 선생님이 직접 만들어요.',
+      points: [
+        '역할·말투·수업 목표를 정해 챗봇을 만들어요',
+        '학생 대화 기록을 선생님이 확인할 수 있어요',
+        '토론·역할극·글쓰기 연습에 바로 써요',
+      ],
+    },
   ];
   // ==========================================
 
@@ -439,27 +508,66 @@
   // 클릭으로도 오디오 활성화(브라우저 자동재생 정책)
   window.addEventListener('pointerdown', () => { if (!audioCtx) chime(); }, { once: true });
 
-  // ---- 도구 소개 회전 ----
+  // ---- 도구 소개: 작은 카드 회전 + 가끔 전체 화면 ----
   const toolSpot = document.getElementById('toolSpot');
+  const bigSpot = document.getElementById('bigSpot');
   let showcaseIndex = 0;
-  function paintShowcase(i) {
+  let smallStreak = 0;
+
+  function paintSmall(i) {
     const t = SHOWCASE[i];
     document.getElementById('tsEmoji').textContent = t.emoji;
     document.getElementById('tsName').textContent = t.name;
     document.getElementById('tsDesc').textContent = t.desc;
   }
+
+  function paintBig(i) {
+    const t = SHOWCASE[i];
+    document.getElementById('bsEmoji').textContent = t.emoji;
+    document.getElementById('bsName').textContent = t.name;
+    document.getElementById('bsTagline').textContent = t.tagline;
+    const list = document.getElementById('bsPoints');
+    list.innerHTML = '';
+    t.points.forEach(p => {
+      const li = document.createElement('li');
+      li.textContent = p;
+      list.appendChild(li);
+    });
+  }
+
   function startShowcase() {
     if (!SHOWCASE.length) return;
-    paintShowcase(0);
+    paintSmall(0);
     if (SHOWCASE.length < 2) return;
-    setInterval(() => {
-      toolSpot.classList.add('fade');           // 사라진 뒤 교체해야 글자가 겹쳐 보이지 않음
+
+    const step = () => {
+      if (smallStreak >= SMALL_BEFORE_BIG) {
+        // 큰 화면 차례 — 지금 작은 카드에 떠 있는 도구를 그대로 크게 보여줍니다.
+        smallStreak = 0;
+        paintBig(showcaseIndex);
+        bigSpot.classList.add('on');
+        setTimeout(() => {
+          bigSpot.classList.remove('on');
+          setTimeout(advanceSmall, 800); // 페이드아웃이 끝난 뒤 다음 카드로
+        }, BIG_MS);
+        return;
+      }
+      advanceSmall();
+    };
+
+    const advanceSmall = () => {
+      toolSpot.classList.add('fade');            // 사라진 뒤 교체해야 글자가 겹쳐 보이지 않음
       setTimeout(() => {
         showcaseIndex = (showcaseIndex + 1) % SHOWCASE.length;
-        paintShowcase(showcaseIndex);
+        paintSmall(showcaseIndex);
         toolSpot.classList.remove('fade');
+        smallStreak++;
+        setTimeout(step, SMALL_MS);
       }, 700);
-    }, TOOL_ROTATE_MS);
+    };
+
+    smallStreak = 1;
+    setTimeout(step, SMALL_MS);
   }
 
   // ---- 시작 ----
