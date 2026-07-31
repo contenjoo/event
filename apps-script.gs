@@ -79,7 +79,6 @@ function handleDraw(p) {
   var specials = rollSpecials(tools);
   var prize = buildPrize(tools, period.days, specials);
   var token = Utilities.getUuid();
-  incrementStarCount(); // 별 찾기 시작 = TV 별자리 별 하나 (LockService 내부라 동시성 안전)
   tokenSheet.appendRow([
     token,
     now,
@@ -90,6 +89,8 @@ function handleDraw(p) {
     safeCellText(prize),
     '',
   ]);
+  // 토큰 저장이 성공한 draw만 TV 별자리에 반영 (LockService 내부라 동시성 안전)
+  incrementStarCount();
 
   return json({
     ok: true,
