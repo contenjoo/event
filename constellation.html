@@ -41,7 +41,32 @@
   }
   header.title .sub { margin-top: 1.2vh; font-size: clamp(13px, 1.5vw, 24px); color: var(--muted); font-weight: 600; }
 
-  footer.counter { margin-top: auto; text-align: center; padding: 0 4vw 5vh; }
+  /* 회전하는 도구 소개 — 먼 거리에서도 읽히게 한 번에 하나씩 */
+  .toolspot { margin-top: auto; text-align: center; padding: 0 4vw; }
+  .toolspot .ts-label {
+    font-size: clamp(11px, 1.1vw, 18px); font-weight: 700; letter-spacing: .24em;
+    color: var(--muted); opacity: .75; margin-bottom: 1.4vh;
+  }
+  .toolspot .ts-card {
+    display: inline-flex; align-items: center; gap: clamp(12px, 1.6vw, 26px);
+    max-width: min(1100px, 88vw); text-align: left;
+    padding: clamp(12px, 1.8vh, 26px) clamp(18px, 2.4vw, 38px);
+    border-radius: 22px;
+    background: rgba(20, 26, 58, .5); border: 1px solid rgba(154, 163, 207, .22);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  .toolspot.fade .ts-card { opacity: 0; transform: translateY(8px); }
+  .toolspot .ts-emoji { font-size: clamp(30px, 3.4vw, 58px); line-height: 1; flex: 0 0 auto; }
+  .toolspot .ts-body { display: block; }
+  .toolspot .ts-name {
+    display: block; font-size: clamp(17px, 1.9vw, 32px); font-weight: 900; color: var(--gold);
+  }
+  .toolspot .ts-desc {
+    display: block; margin-top: .5vh; color: var(--text); opacity: .9;
+    font-size: clamp(13px, 1.35vw, 23px); font-weight: 600; line-height: 1.5;
+  }
+
+  footer.counter { text-align: center; padding: 3.2vh 4vw 5vh; }
   footer.counter .label { font-size: clamp(14px, 1.6vw, 26px); color: var(--muted); font-weight: 600; }
   footer.counter .num {
     display: block; margin-top: .4vh;
@@ -96,6 +121,17 @@
     <h1>선생님들의 미래교실 별자리</h1>
     <div class="sub">선생님 한 분이 수업의 별 하나를 밝힙니다</div>
   </header>
+  <section class="toolspot" id="toolSpot" aria-live="off">
+    <div class="ts-label">오늘 만나는 AI 수업 도구</div>
+    <div class="ts-card" id="tsCard">
+      <span class="ts-emoji" id="tsEmoji"></span>
+      <span class="ts-body">
+        <span class="ts-name" id="tsName"></span>
+        <span class="ts-desc" id="tsDesc"></span>
+      </span>
+    </div>
+  </section>
+
   <footer class="counter">
     <div class="label">오늘 선생님들이 밝힌 수업의 가능성</div>
     <div class="num"><span id="countNum">0</span><span class="unit">개</span></div>
@@ -120,6 +156,17 @@
   const DEMO_MIN_MS = 2500;    // 데모: 별 하나 자동 추가 최소 간격
   const DEMO_MAX_MS = 6000;
   const DEMO_START = 12;       // 데모 시작 별 개수
+
+  // 화면 아래에서 돌아가는 도구 소개 (stars.html의 about 문구와 같은 내용)
+  const TOOL_ROTATE_MS = 7000;
+  const SHOWCASE = [
+    { emoji: '🎤', name: 'Snorkl',
+      desc: '학생이 말과 그림으로 생각을 설명하면 AI가 바로 피드백을 줘요. 모든 학생의 답을 한 화면에서 확인할 수 있어요.' },
+    { emoji: '📝', name: 'Redmenta',
+      desc: '수업 자료나 주제만 넣으면 AI가 워크시트·퀴즈를 만들어 줘요. 채점과 결과 분석도 자동이에요.' },
+    { emoji: '🤖', name: 'Mizou',
+      desc: '우리 반 수업에 맞는 AI 챗봇을 직접 만들어요. 학생 대화 내용을 선생님이 확인할 수 있어 안전해요.' },
+  ];
   // ==========================================
 
   const PALETTE = ['#ffd36e', '#ff5d8f', '#6c5ce7', '#38d39f', '#4dabf7', '#ffffff'];
@@ -392,10 +439,34 @@
   // 클릭으로도 오디오 활성화(브라우저 자동재생 정책)
   window.addEventListener('pointerdown', () => { if (!audioCtx) chime(); }, { once: true });
 
+  // ---- 도구 소개 회전 ----
+  const toolSpot = document.getElementById('toolSpot');
+  let showcaseIndex = 0;
+  function paintShowcase(i) {
+    const t = SHOWCASE[i];
+    document.getElementById('tsEmoji').textContent = t.emoji;
+    document.getElementById('tsName').textContent = t.name;
+    document.getElementById('tsDesc').textContent = t.desc;
+  }
+  function startShowcase() {
+    if (!SHOWCASE.length) return;
+    paintShowcase(0);
+    if (SHOWCASE.length < 2) return;
+    setInterval(() => {
+      toolSpot.classList.add('fade');           // 사라진 뒤 교체해야 글자가 겹쳐 보이지 않음
+      setTimeout(() => {
+        showcaseIndex = (showcaseIndex + 1) % SHOWCASE.length;
+        paintShowcase(showcaseIndex);
+        toolSpot.classList.remove('fade');
+      }, 700);
+    }, TOOL_ROTATE_MS);
+  }
+
   // ---- 시작 ----
   resize();
   seedBg();
   if (DEMO_MODE) seedInitial(DEMO_START);
+  startShowcase();
   applyMode();
   requestAnimationFrame(frame);
 })();
