@@ -359,10 +359,11 @@
 
   // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
   // 현재: 30일 72% / 60일 20% / 90일 8%
+  // weight는 표기용 — 실제 추첨은 서버(apps-script.gs)에서. 값 바꾸면 양쪽 함께.
   const PERIODS = [
-    { type: 'period', days: 30, emoji: '⭐', name: '1개월 체험권', short: '1개월', weight: 72 },
-    { type: 'period', days: 60, emoji: '🌟', name: '2개월 체험권', short: '2개월', weight: 20 },
-    { type: 'period', days: 90, emoji: '🌠', name: '3개월 체험권', short: '3개월', weight: 8 },
+    { type: 'period', days: 30, emoji: '⭐', name: '1개월 체험권', short: '1개월', weight: 50 },
+    { type: 'period', days: 60, emoji: '🌟', name: '2개월 체험권', short: '2개월', weight: 30 },
+    { type: 'period', days: 90, emoji: '🌠', name: '3개월 체험권', short: '3개월', weight: 20 },
   ];
 
   // 특별상 — 기간 당첨에 "추가로" 붙는 보너스 (독립 확률).

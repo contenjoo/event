@@ -25,9 +25,9 @@ var TOKEN_SHEET_HEADERS = ['토큰', '생성시각', '클라이언트ID', '선�
 var TOOL_IDS = ['Snorkl', 'Redmenta', 'Mizou'];
 var MAX_TOOLS = 2; // 선생님 1인당 최대 선택 도구 수
 var PERIODS = [
-  { days: 30, weight: 72 },
-  { days: 60, weight: 20 },
-  { days: 90, weight: 8 },
+  { days: 30, weight: 50 },
+  { days: 60, weight: 30 },
+  { days: 90, weight: 20 },
 ];
 var SPECIALS = [
   { full: 'Snorkl 과제 10개 추가', chance: 0.40, requiresTool: 'Snorkl' },
