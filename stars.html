@@ -246,6 +246,32 @@
     font-size: 15px; line-height: 1.5;
   }
 
+  /* ---- redeem cards ---- */
+  .rcard {
+    background: #141934; border: 1px solid var(--border); border-radius: 14px;
+    padding: 15px 16px; margin-bottom: 14px;
+  }
+  .rcard .rtitle { font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .rcard .rtitle .rmonths { color: var(--gold); }
+  .rcard .rgo {
+    display: block; text-align: center; text-decoration: none;
+    margin: 12px 0 10px; padding: 13px; border-radius: 12px;
+    font-size: 15.5px; font-weight: 800; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .rcard .rgo:active { transform: translateY(1px); }
+  .rcard .rmini { display: flex; gap: 8px; }
+  .rcard .rmini button {
+    flex: 1; padding: 10px; border-radius: 10px; cursor: pointer;
+    font-size: 13px; font-weight: 700; font-family: inherit;
+    color: var(--text); background: #1d2347; border: 1px solid var(--border);
+    transition: border-color .15s;
+  }
+  .rcard .rmini button:hover { border-color: var(--accent-2); }
+  .rcard .rmini button.done { border-color: var(--good); color: var(--good); }
+  .rcard .rurl { margin-top: 9px; font-size: 11.5px; color: var(--muted); word-break: break-all; text-align: center; }
+  .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
+
   canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 26px; }
 </style>
@@ -297,44 +323,17 @@
       </div>
     </section>
 
-    <!-- STEP 3: form -->
-    <section class="step" id="stepForm">
+    <!-- STEP 3: redeem (개인정보 없이 즉시 지급) -->
+    <section class="step" id="stepRedeem">
       <div class="step-label">STEP 3 / 3</div>
-      <h2>찾은 별을 보내드릴 곳을 알려주세요</h2>
-      <div class="prize-summary">🌟 <span><b id="summaryText"></b></span></div>
-      <form id="entryForm" novalidate>
-        <label for="fName">이름</label>
-        <input id="fName" name="name" autocomplete="name" maxlength="80" placeholder="홍길동" required />
-        <div class="err" id="eName"></div>
-        <label for="fSchool">학교</label>
-        <input id="fSchool" name="school" autocomplete="organization" maxlength="120" placeholder="○○초등학교" required />
-        <div class="err" id="eSchool"></div>
-        <label for="fEmail">이메일</label>
-        <input id="fEmail" name="email" type="email" maxlength="254" autocomplete="email" placeholder="teacher@school.kr" required />
-        <div class="err" id="eEmail"></div>
-        <label for="fEmail2">이메일 확인 <span style="color:var(--accent);">(한 번 더 정확히!)</span></label>
-        <input id="fEmail2" name="email2" type="email" maxlength="254" autocomplete="off" placeholder="이메일을 다시 입력해 주세요" required />
-        <div class="err" id="eEmail2"></div>
+      <h2>🎉 체험권 당첨!</h2>
+      <p class="lead">아래 링크로 바로 시작하거나, 폰에 저장해 두고 나중에 쓰셔도 돼요.</p>
 
-        <input class="honeypot" id="fWebsite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <div id="redeemCards"></div>
 
-        <div class="notice">🗓️ 경품은 <b>8월 19일</b>에 입력하신 이메일로 <b>일괄 발송</b>될 예정이에요.</div>
-        <label class="check-row" id="earlyRow" for="fEarly">
-          <input type="checkbox" id="fEarly" />
-          <span class="box"></span>
-          <span>⚡ 미리 받고 싶어요<span class="sub">다음 주 월요일에 먼저 보내드려요</span></span>
-        </label>
-
-        <button class="btn" id="submitBtn" type="submit">✅ 경품 신청하기</button>
-      </form>
-    </section>
-
-    <!-- DONE -->
-    <section class="step" id="stepDone">
-      <div class="done-box">
-        <div class="big-emoji">⭐</div>
-        <h2>별이 켜졌어요!</h2>
-        <p id="doneText"></p>
+      <div class="notice">
+        ⚠️ <b>“지금 시작하기”</b>를 누르면 체험이 바로 시작돼요.<br/>
+        나중에 쓰실 거면 <b>저장·복사</b>만 해두세요.
       </div>
     </section>
 
@@ -747,106 +746,139 @@
     if ($('#stepScratch').classList.contains('on')) cells.filter(c => !c.opened).forEach(paintCellFoil);
   });
 
-  // 실제 저장용 경품 문구(서버 결과) — 화면엔 별 이름으로 보여줍니다.
-  function prizeText() {
-    if (state.serverPrize) return state.serverPrize;
-    const base = `${state.tools.join(' · ')} ${state.period.days}일 무료 체험`;
-    if (!state.bonuses.length) return base;
-    return base + ' + ' + state.bonuses.map(s => s.full).join(' + ');
+  // ===== 체험권 지급 링크 =====
+  // 재사용 링크. 링크 자체에 사용횟수·만료가 걸려 있음(예: Redmenta 각 1000회·2026-09-30).
+  // 빈 문자열('')이면 아직 링크 미확보 → 화면에 "준비 중"으로 표시.
+  const REDEEM = {
+    tools: {
+      Snorkl: {
+        30: 'https://teacher.snorkl.app/home?referralCode=joo30',
+        60: 'https://teacher.snorkl.app/home?referralCode=joo60',
+        90: 'https://teacher.snorkl.app/home?referralCode=joo90',
+      },
+      Redmenta: {
+        30: 'https://app.redmenta.com/inv/keris30',
+        60: 'https://app.redmenta.com/inv/keris60',
+        90: 'https://app.redmenta.com/inv/keris90',
+      },
+      Mizou: { 30: '', 60: '', 90: '' },   // 링크 준비 중
+    },
+    bonuses: {
+      '주이즈 1년 이용권': '',                        // 링크 준비 중
+      'Snorkl 과제 10개 추가': 'https://go.snorkl.app/superstars',
+    },
+  };
+
+  function redeemItems() {
+    const days = state.period.days;
+    const items = state.tools.map(id => {
+      const t = TOOLS.find(x => x.id === id);
+      const url = (REDEEM.tools[id] || {})[days] || '';
+      return { emoji: t ? t.emoji : '🎁', title: `${id} ${state.period.name}`, url };
+    });
+    state.bonuses.forEach(s => {
+      items.push({ emoji: '☄️', title: `별똥별 · ${s.full}`, url: REDEEM.bonuses[s.full] || '' });
+    });
+    return items;
   }
 
-  // 경품 표시 문구(개월 명확)
-  function prizeStars() {
-    const parts = [`${state.period.emoji} ${state.period.name} · ${state.tools.join('·')}`];
-    state.bonuses.forEach(s => parts.push(`🎁 ${s.full}`));
-    return parts.join('  +  ');
+  function buildRedeem() {
+    const wrap = $('#redeemCards');
+    wrap.innerHTML = '';
+    redeemItems().forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'rcard';
+      if (!item.url) {
+        card.innerHTML =
+          `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
+          `<div class="rpending">🔧 링크 준비 중이에요 — 부스 직원에게 문의해 주세요.</div>`;
+        wrap.appendChild(card);
+        return;
+      }
+      card.innerHTML =
+        `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
+        `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🚀 지금 시작하기 →</a>` +
+        `<div class="rmini">` +
+          `<button type="button" data-act="share">📤 폰에 저장</button>` +
+          `<button type="button" data-act="copy">🔗 링크 복사</button>` +
+          `<button type="button" data-act="image">🖼️ 이미지</button>` +
+        `</div>` +
+        `<div class="rurl">${escapeHtml(item.url)}</div>`;
+      const [shareB, copyB, imgB] = card.querySelectorAll('.rmini button');
+      shareB.addEventListener('click', () => shareLink(item, shareB));
+      copyB.addEventListener('click', () => copyLink(item.url, copyB));
+      imgB.addEventListener('click', () => saveCoupon(item, imgB));
+      wrap.appendChild(card);
+    });
+  }
+
+  function markDone(btn, label) {
+    const orig = btn.dataset.orig || (btn.dataset.orig = btn.textContent);
+    btn.textContent = label; btn.classList.add('done');
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.textContent = orig; btn.classList.remove('done'); }, 1600);
+  }
+
+  async function shareLink(item, btn) {
+    const text = `${item.title} 체험권\n${item.url}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `${item.title} 체험권`, text, url: item.url }); }
+      catch (_) {}
+      return;
+    }
+    copyLink(item.url, btn); // 데스크탑 등 미지원 시 복사로 대체
+  }
+
+  async function copyLink(url, btn) {
+    try { await navigator.clipboard.writeText(url); }
+    catch (_) {
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+    }
+    markDone(btn, '복사됨 ✓');
+  }
+
+  // 폰 앨범에 저장할 쿠폰 이미지(PNG) 생성
+  function saveCoupon(item, btn) {
+    const w = 720, h = 380, dpr = 2;
+    const c = document.createElement('canvas');
+    c.width = w * dpr; c.height = h * dpr;
+    const x = c.getContext('2d'); x.scale(dpr, dpr);
+    const g = x.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, '#1a1f3c'); g.addColorStop(1, '#232a52');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.strokeStyle = '#ffd36e'; x.lineWidth = 4; x.setLineDash([12, 8]);
+    x.strokeRect(16, 16, w - 32, h - 32); x.setLineDash([]);
+    x.textAlign = 'center';
+    x.fillStyle = '#ffd36e'; x.font = '800 19px sans-serif';
+    x.fillText('2026 AI 활용 교육 콘퍼런스 · 체험권', w / 2, 60);
+    x.fillStyle = '#fff'; x.font = '900 32px sans-serif';
+    x.fillText(`${item.emoji} ${item.title}`, w / 2, 145);
+    x.fillStyle = '#9aa3cf'; x.font = '600 15px sans-serif';
+    x.fillText('아래 링크로 접속하면 체험이 시작됩니다', w / 2, 195);
+    x.fillStyle = '#eef1ff';
+    let fs = 20; do { x.font = `700 ${fs}px monospace`; fs -= 1; } while (x.measureText(item.url).width > w - 70 && fs > 10);
+    x.fillText(item.url, w / 2, 245);
+    x.fillStyle = '#9aa3cf'; x.font = '600 13px sans-serif';
+    x.fillText('with 오늘배움', w / 2, h - 36);
+    const a = document.createElement('a');
+    a.href = c.toDataURL('image/png');
+    a.download = `체험권_${item.title.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    markDone(btn, '저장됨 ✓');
   }
 
   claimBtn.addEventListener('click', () => {
-    $('#summaryText').textContent = prizeStars();
-    show('#stepForm');
-    $('#fName').focus();
+    ensureAudio();
+    buildRedeem();
+    show('#stepRedeem');
+    confettiBurst();
   });
 
-  // early-delivery checkbox highlight
-  $('#fEarly').addEventListener('change', (e) => {
-    $('#earlyRow').classList.toggle('checked', e.target.checked);
-  });
-
-  // ---------- step 3: form ----------
-  const form = $('#entryForm');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (state.submitted) return;
-
-    const name = $('#fName').value.trim();
-    const school = $('#fSchool').value.trim();
-    const email = $('#fEmail').value.trim();
-    let ok = true;
-    $('#eName').textContent = name ? '' : '이름을 입력해 주세요'; ok = ok && !!name;
-    $('#eSchool').textContent = school ? '' : '학교를 입력해 주세요'; ok = ok && !!school;
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    $('#eEmail').textContent = emailOk ? '' : '올바른 이메일을 입력해 주세요'; ok = ok && emailOk;
-    const email2 = $('#fEmail2').value.trim();
-    const email2Ok = !!email2 && email2.toLowerCase() === email.toLowerCase();
-    $('#eEmail2').textContent = email2
-      ? (email2Ok ? '' : '위에 적은 이메일과 달라요 — 다시 확인해 주세요')
-      : '이메일을 한 번 더 입력해 주세요';
-    ok = ok && email2Ok;
-    if (!ok) return;
-    if (!state.drawToken) {
-      $('#eEmail').textContent = '별 찾기 정보가 만료됐어요. 처음부터 다시 시작해 주세요.';
-      return;
-    }
-    const early = $('#fEarly').checked;
-
-    const btn = $('#submitBtn');
-    btn.disabled = true; btn.textContent = '전송 중…';
-    try {
-      if (!SHEET_ENDPOINT) throw new Error('endpoint_missing');
-      const res = await fetch(SHEET_ENDPOINT, {
-        method: 'POST',
-        body: new URLSearchParams({
-          action: 'submit',
-          token: state.drawToken,
-          name, school, email, email2,
-          early: early ? '미리받기' : '',
-          website: $('#fWebsite').value.trim(),
-        }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data) throw new Error('submit_failed');
-      if (data.dup) {
-        btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
-        $('#eEmail').textContent = '이미 참여한 이메일이에요 — 한 이메일당 1회만 참여할 수 있어요.';
-        $('#fEmail').focus();
-        return;
-      }
-      if (!data.ok) {
-        const error = new Error(data.error || 'submit_failed');
-        error.code = data.error || 'submit_failed';
-        throw error;
-      }
-      state.submitted = true;
-      $('#doneText').innerHTML =
-        `<b>${escapeHtml(name)}</b> 선생님의 별이 <b>미래교실</b>에 켜졌습니다. ✨<br/>` +
-        `<b>${escapeHtml(prizeStars())}</b><br/><br/>` +
-        `입력하신 이메일(<b>${escapeHtml(email)}</b>)로 ` +
-        (early
-          ? `<b>미리 받기</b> 요청이 접수되어 <b>다음 주 월요일</b>에 먼저 보내드릴게요! ⚡`
-          : `<b>8월 19일</b>에 보내드릴게요!`) +
-        `<br/><br/><span class="check-email">📧 안내 메일을 꼭 확인해 주세요!<br/>(스팸함도 함께 확인해 주세요)</span>`;
-      show('#stepDone');
-      confettiBurst();
-    } catch (err) {
-      btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
-      $('#eEmail').textContent = ['draw_expired', 'invalid_token'].includes(err.code)
-        ? '별 찾기 정보가 만료됐어요. 처음부터 다시 시작해 주세요.'
-        : '전송에 실패했어요. 잠시 후 다시 시도해 주세요.';
-      return;
-    }
-    btn.disabled = false; btn.textContent = '✅ 경품 신청하기';
-  });
+  // STEP 3은 개인정보 없이 링크만 보여주는 저장 화면입니다(위 buildRedeem 참고).
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({
