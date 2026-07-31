@@ -30,7 +30,6 @@ var PERIODS = [
   { days: 90, weight: 8 },
 ];
 var SPECIALS = [
-  { full: '주이즈 1년 이용권', chance: 0.25, always: true },
   { full: 'Snorkl 과제 10개 추가', chance: 0.40, requiresTool: 'Snorkl' },
 ];
 var TOKEN_TTL_MILLISECONDS = 30 * 60 * 1000;

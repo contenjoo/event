@@ -370,7 +370,6 @@
   //  · 주이즈: 어떤 툴을 골랐든 항상 보너스 후보
   //  · Snorkl 과제 +10: Snorkl을 선택했을 때만 보너스 후보
   const SPECIALS = [
-    { emoji: '☄️', short: '별똥별', full: '주이즈 1년 이용권',    chance: 0.25, always: true },
     { emoji: '💫', short: '별똥별', full: 'Snorkl 과제 10개 추가', chance: 0.40, requiresTool: 'Snorkl' },
   ];
 
@@ -528,10 +527,13 @@
     return SPECIALS.filter(s => s.always || state.tools.includes(s.requiresTool));
   }
   // 확률(%)은 노출하지 않고, 무엇을 받는지 명확히 안내합니다.
+  // 별똥별 안내는 해당 보너스가 가능한 선택(Snorkl)일 때만 보여줍니다.
   function renderOdds() {
+    const bonusChip = eligibleSpecials().length
+      ? '<span class="chip">☄️ 운이 좋으면 별똥별 추가 선물</span>'
+      : '';
     $('#odds').innerHTML =
-      '<span class="chip">⭐ 같은 별 3개를 맞추면 1~3개월 체험권</span>' +
-      '<span class="chip">☄️ 운이 좋으면 별똥별 추가 선물</span>';
+      '<span class="chip">⭐ 같은 별 3개를 맞추면 1~3개월 체험권</span>' + bonusChip;
   }
 
   // ---------- step 2: match-3 scratch ----------
@@ -770,7 +772,6 @@
       },
     },
     bonuses: {
-      '주이즈 1년 이용권': 'booth',                   // 부스에서 직접 지급
       'Snorkl 과제 10개 추가': 'https://teameducator.org/r/wC6CwS7k',
     },
   };
