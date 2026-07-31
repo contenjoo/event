@@ -53,6 +53,16 @@
   h2 b { color: var(--gold); }
   .lead { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
 
+  .reward-hero {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(135deg, rgba(255,211,110,.16), rgba(108,92,231,.16));
+    border: 1px solid var(--gold); border-radius: 14px;
+    padding: 13px 15px; margin: 0 0 16px;
+  }
+  .reward-hero .rh-emoji { font-size: 30px; flex: 0 0 auto; }
+  .reward-hero b { color: var(--gold); font-size: 14.5px; }
+  .reward-hero .rh-sub { display: block; color: var(--text); font-size: 12.5px; line-height: 1.5; margin-top: 2px; }
+
   /* ---- step 1: tool multi-select ---- */
   .tool {
     display: flex; align-items: center; gap: 13px;
@@ -256,6 +266,13 @@
       <div class="step-label">STEP 1 / 3</div>
       <h2>오늘, 어떤 수업을 더 <b>빛나게</b> 하고 싶으세요?</h2>
       <p class="lead" id="toolLead">함께할 도구를 골라주세요.</p>
+      <div class="reward-hero">
+        <span class="rh-emoji">🎁</span>
+        <span>
+          <b>수업 고민을 하나 고르고 별을 찾아보세요</b>
+          <span class="rh-sub">1~3개월 체험권과 스티커·배지·타올을 드립니다</span>
+        </span>
+      </div>
       <div id="toolList"></div>
       <button class="btn" id="proceedBtn" disabled>툴을 먼저 선택해 주세요</button>
     </section>
@@ -343,9 +360,9 @@
   // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
   // 현재: 30일 72% / 60일 20% / 90일 8%
   const PERIODS = [
-    { type: 'period', days: 30, emoji: '🌱', name: '새로운 시작의 별', short: '새 시작', weight: 72 },
-    { type: 'period', days: 60, emoji: '🌿', name: '성장의 별',       short: '성장',   weight: 20 },
-    { type: 'period', days: 90, emoji: '🌟', name: '빛나는 수업의 별', short: '빛나는 별', weight: 8 },
+    { type: 'period', days: 30, emoji: '⭐', name: '1개월 체험권', short: '1개월', weight: 72 },
+    { type: 'period', days: 60, emoji: '🌟', name: '2개월 체험권', short: '2개월', weight: 20 },
+    { type: 'period', days: 90, emoji: '🌠', name: '3개월 체험권', short: '3개월', weight: 8 },
   ];
 
   // 특별상 — 기간 당첨에 "추가로" 붙는 보너스 (독립 확률).
@@ -358,7 +375,7 @@
   ];
 
   // 복권 채우기용 수업 아이콘 — 당첨과 무관, 발견의 재미용
-  const DECOYS = ['⭐', '✏️', '💬', '💡', '📚', '🍎', '🌈'];
+  const DECOYS = ['✏️', '💬', '💡', '📚', '🍎', '🌈', '🎈'];
   // ==========================================
 
   const $ = (s) => document.querySelector(s);
@@ -510,12 +527,11 @@
   function eligibleSpecials() {
     return SPECIALS.filter(s => s.always || state.tools.includes(s.requiresTool));
   }
-  // 특별상 보너스 확률만 안내하고 기간별 당첨 확률은 노출하지 않습니다.
+  // 확률(%)은 노출하지 않고, 무엇을 받는지 명확히 안내합니다.
   function renderOdds() {
-    const oddsEl = $('#odds');
-    const specialChips = eligibleSpecials().map(s =>
-      `<span class="chip">${s.emoji} ${s.short} 보너스 ${Math.round(s.chance * 100)}%</span>`);
-    oddsEl.innerHTML = specialChips.join('');
+    $('#odds').innerHTML =
+      '<span class="chip">⭐ 같은 별 3개를 맞추면 1~3개월 체험권</span>' +
+      '<span class="chip">☄️ 운이 좋으면 별똥별 추가 선물</span>';
   }
 
   // ---------- step 2: match-3 scratch ----------
@@ -537,18 +553,16 @@
     const specialSet = new Set(draw.specials);
     state.bonuses = SPECIALS.filter(s => specialSet.has(s.full));
     if (!state.period) throw new Error('invalid_draw_period');
-    winningKeys = new Set([state.period.emoji, ...state.bonuses.map(s => s.emoji)]);
+    // 6칸에서는 개월(체험권)만 긁어 맞추고, 별똥별 보너스는 결과에서 공개
+    winningKeys = new Set([state.period.emoji]);
     foundWinningKeys = new Set();
     stopHeartbeat();
     ticket.classList.remove('suspense', 'revealed');
     claimBtn.style.display = 'none';
     setStatus('✨ 은박을 살살 긁어서 같은 별 3개를 찾아보세요!');
 
-    // 기간과 서버에서 당첨된 특별 보너스를 각각 3칸씩 넣어 실제 긁기로 공개합니다.
-    const prizeSymbols = [
-      { key: state.period.emoji, label: state.period.short },
-      ...state.bonuses.map(s => ({ key: s.emoji, label: s.short })),
-    ];
+    // 개월(체험권)만 3칸 넣어 긁기로 공개합니다. 별똥별은 결과에서만.
+    const prizeSymbols = [{ key: state.period.emoji, label: state.period.short }];
     const layout = buildTicketLayout(prizeSymbols);
 
     cellsEl.innerHTML = '';
@@ -567,27 +581,25 @@
     cells.forEach(paintCellFoil);
   }
 
+  const TICKET_CELLS = 6;
   function buildTicketLayout(prizeSymbols) {
     const layout = [];
     prizeSymbols.forEach(sym => layout.push(sym, sym, sym));
 
+    // 채우기는 수업 아이콘만 — 같은 게 3개 겹치지 않게 심볼당 최대 2칸
     const prizeKeys = new Set(prizeSymbols.map(sym => sym.key));
-    const fillers = shuffleArr([
-      ...PERIODS
-        .filter(p => !prizeKeys.has(p.emoji))
-        .map(p => ({ key: p.emoji, label: p.short })),
-      ...DECOYS
-        .filter(emoji => !prizeKeys.has(emoji))
-        .map(emoji => ({ key: emoji, label: '수업' })),
-    ]);
+    const fillers = shuffleArr(
+      DECOYS.filter(emoji => !prizeKeys.has(emoji)).map(emoji => ({ key: emoji, label: '수업' }))
+    );
 
-    let remaining = 12 - layout.length;
+    let remaining = TICKET_CELLS - layout.length;
     fillers.forEach(sym => {
+      if (remaining <= 0) return;
       const copies = Math.min(2, remaining);
       for (let i = 0; i < copies; i++) layout.push(sym);
       remaining -= copies;
     });
-    if (layout.length !== 12) throw new Error('invalid_ticket_layout');
+    if (layout.length !== TICKET_CELLS) throw new Error('invalid_ticket_layout');
     return shuffleArr(layout);
   }
 
@@ -715,8 +727,8 @@
       confettiBurst();
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
       const prizes = [
-        `${state.period.emoji} ${state.period.name} (${state.tools.join('·')} ${state.period.days}일)`,
-        ...state.bonuses.map(s => `${s.emoji} ${s.full}`),
+        `${state.period.emoji} ${state.period.name} · ${state.tools.join('·')}`,
+        ...state.bonuses.map(s => `🎁 ${s.full}`),
       ];
       setStatus('🌟 선생님의 수업에 새로운 가능성이 열렸어요!', true);
       matchStatus.insertAdjacentHTML('afterend',
@@ -743,10 +755,10 @@
     return base + ' + ' + state.bonuses.map(s => s.full).join(' + ');
   }
 
-  // 별 이름으로 꾸민 경품 표시 문구
+  // 경품 표시 문구(개월 명확)
   function prizeStars() {
-    const parts = [`${state.period.emoji} ${state.period.name} · ${state.tools.join('·')} ${state.period.days}일 이용권`];
-    state.bonuses.forEach(s => parts.push(`${s.emoji} ${s.full}`));
+    const parts = [`${state.period.emoji} ${state.period.name} · ${state.tools.join('·')}`];
+    state.bonuses.forEach(s => parts.push(`🎁 ${s.full}`));
     return parts.join('  +  ');
   }
 
