@@ -371,14 +371,23 @@
     },
   ];
 
-  // 체험 기간 — weight 비율로 추첨. 짧을수록 흔하고 길수록 희귀.
-  // 현재: 1개월 50% / 2개월 30% / 3개월 20%
+  // 서버가 뽑는 등급 — days는 서버 응답 값(30/60/90)이자 등급 구분 키.
+  // 실제 개월 수는 도구마다 다르므로 아래 TOOL_MONTHS에서 정합니다.
   // weight는 표기용 — 실제 추첨은 서버(apps-script.gs)에서. 값 바꾸면 양쪽 함께.
   const PERIODS = [
-    { type: 'period', days: 30, emoji: '⭐', name: '1개월 체험권', short: '1개월', weight: 50 },
-    { type: 'period', days: 60, emoji: '🌟', name: '2개월 체험권', short: '2개월', weight: 30 },
-    { type: 'period', days: 90, emoji: '🌠', name: '3개월 체험권', short: '3개월', weight: 20 },
+    { type: 'period', days: 30, emoji: '⭐', name: '행운의 별',    short: '행운',    weight: 50 },
+    { type: 'period', days: 60, emoji: '🌟', name: '큰 행운의 별', short: '큰 행운', weight: 30 },
+    { type: 'period', days: 90, emoji: '🌠', name: '최고의 별',    short: '최고',    weight: 20 },
   ];
+
+  // 등급(days) → 도구별 지급 개월. Snorkl은 1개월을 빼고 2~3개월로 운영합니다.
+  // 4개월 리퍼럴 링크가 준비되면 Snorkl 90을 4로 바꾸고 REDEEM에 링크만 넣으면 됩니다.
+  const TOOL_MONTHS = {
+    Snorkl:   { 30: 2, 60: 3, 90: 3 },
+    Redmenta: { 30: 1, 60: 2, 90: 3 },
+    Mizou:    { 30: 1, 60: 2, 90: 3 },
+  };
+  const monthsFor = (toolId, days) => (TOOL_MONTHS[toolId] || {})[days] || Math.round(days / 30);
 
   // 특별상 — 기간 당첨에 "추가로" 붙는 보너스 (독립 확률).
   //  · Snorkl 과제 +10: Snorkl을 선택했을 때만 보너스 후보
@@ -724,6 +733,14 @@
     finishTicket();
   }
 
+  // 도구마다 지급 개월이 다르므로 결과는 도구별로 한 줄씩 보여줍니다.
+  function prizeLines() {
+    return state.tools.map(id => {
+      const t = TOOLS.find(x => x.id === id);
+      return `${t ? t.emoji : '🎁'} ${id} ${monthsFor(id, state.period.days)}개월 체험권`;
+    });
+  }
+
   function finishTicket() {
     won = true;
     stopHeartbeat();
@@ -742,7 +759,7 @@
       confettiBurst();
       if ('vibrate' in navigator) navigator.vibrate([40, 30, 120]);
       const prizes = [
-        `${state.period.emoji} ${state.period.name} · ${state.tools.join('·')}`,
+        ...prizeLines(),
         ...state.bonuses.map(s => `🎁 ${s.full}`),
       ];
       setStatus('🌟 선생님의 수업에 새로운 가능성이 열렸어요!', true);
@@ -767,10 +784,11 @@
   // 빈 문자열('')이면 아직 링크 미확보 → 화면에 "준비 중"으로 표시.
   const REDEEM = {
     tools: {
+      // Snorkl은 1개월 없이 2~3개월 — 30일 링크(BYEMZpaM)는 사용하지 않습니다.
       Snorkl: {
-        30: 'https://teameducator.org/r/BYEMZpaM',
-        60: 'https://teameducator.org/r/52EbF3Y9',
-        90: 'https://teameducator.org/r/hf9bs3TF',
+        30: 'https://teameducator.org/r/52EbF3Y9',  // 2개월
+        60: 'https://teameducator.org/r/hf9bs3TF',  // 3개월
+        90: 'https://teameducator.org/r/hf9bs3TF',  // 3개월
       },
       Redmenta: {
         30: 'https://teameducator.org/r/WVgTF7VP',
@@ -799,7 +817,7 @@
         : '';
       return {
         emoji: t ? t.emoji : '🎁',
-        title: `${id} ${state.period.name}`,
+        title: `${id} ${monthsFor(id, days)}개월 체험권`,
         about: t ? t.about : '',
         url, note,
       };
