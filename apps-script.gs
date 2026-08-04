@@ -312,7 +312,8 @@ function ensureTokenSheet() {
 
 function hasRecentDraw(sheet, clientId, now) {
   if (sheet.getLastRow() <= 1) return false;
-  var rows = sheet.getRange(2, 2, sheet.getLastRow() - 1, 2).getValues();
+  var startRow = Math.max(2, sheet.getLastRow() - TOKEN_SCAN_LIMIT + 1);
+  var rows = sheet.getRange(startRow, 2, sheet.getLastRow() - startRow + 1, 2).getValues();
   for (var i = rows.length - 1; i >= 0; i--) {
     if (String(rows[i][1]) !== clientId) continue;
     var createdAt = rows[i][0] instanceof Date ? rows[i][0] : new Date(rows[i][0]);
@@ -332,13 +333,18 @@ function findRequestRecord(sheet, requestId) {
   return findRecordBy(sheet, 8, requestId);
 }
 
+// 토큰은 30분이면 만료되므로 최근 행만 훑어도 충분합니다(행이 쌓여도 느려지지 않게).
+var TOKEN_SCAN_LIMIT = 400;
+
 function findRecordBy(sheet, columnIndex, value) {
   if (sheet.getLastRow() <= 1) return null;
-  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, TOKEN_SHEET_HEADERS.length).getValues();
+  var startRow = Math.max(2, sheet.getLastRow() - TOKEN_SCAN_LIMIT + 1);
+  var rows = sheet.getRange(startRow, 1, sheet.getLastRow() - startRow + 1, TOKEN_SHEET_HEADERS.length).getValues();
+  var rowOffset = startRow;
   for (var i = rows.length - 1; i >= 0; i--) {
     if (!value || String(rows[i][columnIndex]) !== value) continue;
     return {
-      rowNumber: i + 2,
+      rowNumber: i + rowOffset,
       token: String(rows[i][0]),
       createdAt: rows[i][1],
       clientId: String(rows[i][2]),
