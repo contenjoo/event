@@ -296,6 +296,8 @@
   .rcard details.rurl summary::-webkit-details-marker { display: none; }
   .rcard details.rurl div { margin-top: 6px; font-size: 13px; color: #c3cbf0; word-break: break-all; }
   .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
+  /* 같은 서비스 두 번째 카드 — 가입을 또 시키지 않고 안내만 */
+  .rcard .rsame { margin-top: 12px; font-size: 12.5px; color: var(--good); text-align: center; }
   /* 당첨 화면 안내문은 반드시 읽어야 해서 한 단계 승격 (다른 스텝 .lead는 그대로) */
   #stepRedeem .lead { font-size: 14px; color: #c3cbf0; line-height: 1.6; }
 
@@ -480,12 +482,16 @@
         const res = await fetch(SHEET_ENDPOINT, { cache: 'no-store' });
         if (res.ok && (await res.text()).trim() === 'EVENT_API_V2') { backendReady = true; return; }
       } catch (_) { /* 재시도 */ }
-      if (i < 3) await sleep(700 * (i + 1));
+      if (i < 3) await sleep(400 * (i + 1));
     }
     const error = new Error('backend_outdated');
     error.code = 'backend_outdated';
     throw error;
   }
+
+  // 페이지가 열리자마자 Apps Script를 미리 깨워둡니다(콜드스타트 수 초 절약).
+  // 성공하면 "다음" 클릭 시 서버 확인 왕복이 0이 되고, 실패해도 클릭 때 다시 시도합니다.
+  assertBackendReady().catch(() => {});
 
   async function requestDraw() {
     if (!SHEET_ENDPOINT) throw new Error('endpoint_missing');
@@ -858,27 +864,42 @@
 
   function redeemItems() {
     const days = state.period.days;
-    const items = state.tools.map(id => {
-      const t = TOOLS.find(x => x.id === id);
-      const url = (REDEEM.tools[id] || {})[days] || '';
+
+    // 보너스는 어느 서비스 것인지 표시해 두고, 같은 서비스의 체험권보다 먼저 받게 합니다.
+    const bonusItems = state.bonuses.map(s => {
+      const owner = TOOLS.find(t => s.full.indexOf(t.id) >= 0);
       return {
+        service: owner ? owner.id : '',
+        emoji: '☄️',
+        title: `별똥별 · ${s.full}`,
+        cta: s.full.indexOf('과제') >= 0 ? '과제 10개 추가받기' : '보너스 받기',
+        signup: owner ? owner.signup : '',
+        signupUrl: owner ? owner.signupUrl : '',
+        url: REDEEM.bonuses[s.full] || '',
+        taken: false,
+      };
+    });
+
+    const items = [];
+    state.tools.forEach(id => {
+      const t = TOOLS.find(x => x.id === id);
+      // 같은 서비스 보너스를 먼저 — 과제를 추가한 뒤 체험권을 적용해야 순서가 자연스럽습니다.
+      bonusItems.filter(b => b.service === id && !b.taken).forEach(b => { b.taken = true; items.push(b); });
+      items.push({
         id,
+        service: id,
         emoji: t ? t.emoji : '🎁',
         title: `${id} ${monthsFor(id, days)}개월 체험권`,
         about: t ? t.about : '',
+        cta: '체험권 받기',
         signup: t ? t.signup : '',
         signupUrl: t ? t.signupUrl : '',
-        url, note: '',
-      };
-    });
-    state.bonuses.forEach(s => {
-      items.push({
-        emoji: '☄️',
-        title: `별똥별 · ${s.full}`,
-        signup: s.full.indexOf('Snorkl') >= 0 ? 'snorkl.app' : '',
-        signupUrl: s.full.indexOf('Snorkl') >= 0 ? 'https://teacher.snorkl.app/signup' : '',
-        url: REDEEM.bonuses[s.full] || '',
+        url: (REDEEM.tools[id] || {})[days] || '',
+        note: '',
       });
+    });
+    bonusItems.filter(b => !b.taken).forEach(b => {
+      items.push(b);
     });
     return items;
   }
@@ -886,7 +907,14 @@
   function buildRedeem() {
     const wrap = $('#redeemCards');
     wrap.innerHTML = '';
-    redeemItems().forEach(item => {
+    // 같은 서비스가 두 장(예: Snorkl 과제 + 체험권) 나오면 회원가입은 첫 장에서만 안내합니다.
+    const signupShown = new Set();
+    redeemItems().forEach(raw => {
+      const item = Object.assign({}, raw);
+      if (item.signupUrl) {
+        if (signupShown.has(item.signupUrl)) item.signupDone = true;
+        else signupShown.add(item.signupUrl);
+      }
       const card = document.createElement('div');
       card.className = 'rcard';
       wrap.appendChild(card);
@@ -919,14 +947,17 @@
   }
 
   function renderLinkCard(card, item) {
+    const cta = item.cta || '체험권 받기';
+    const needsSignup = item.signupUrl && !item.signupDone;
     card.innerHTML =
       cardTitle(item) +
-      (item.signupUrl
+      (needsSignup
         ? `<a class="rsignup" href="${escapeHtml(item.signupUrl)}" target="_blank" rel="noopener">` +
             `<b>①</b> 먼저 회원가입 (${escapeHtml(item.signup)}) →</a>`
         : '') +
+      (item.signupDone ? `<div class="rsame">✓ 위에서 가입한 ${escapeHtml(item.signup)} 계정으로 받으면 돼요</div>` : '') +
       `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">` +
-        `${item.signupUrl ? '<b>②</b> 체험권 받기 →' : '🚀 체험 시작하기 →'}</a>` +
+        `${needsSignup ? `<b>②</b> ${escapeHtml(cta)} →` : `🚀 ${escapeHtml(cta)} →`}</a>` +
       `<div class="rmini">` +
         `<button type="button" data-act="share">📤 나에게 보내기</button>` +
         `<button type="button" data-act="copy">🔗 링크 복사</button>` +
