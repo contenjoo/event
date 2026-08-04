@@ -404,7 +404,14 @@
   let backendReady = false;
   const state = {
     tools: [], period: null, bonuses: [], drawToken: '', serverPrize: '', submitted: false,
+    drawRequestId: '',
   };
+
+  function newId() {
+    return window.crypto && window.crypto.randomUUID
+      ? window.crypto.randomUUID()
+      : `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+  }
 
   function getClientId() {
     const key = 'share-awards-client-id';
@@ -422,34 +429,54 @@
     }
   }
 
+  // Apps Script는 가끔 정상 응답 대신 구글 오류 페이지(HTML)를 돌려줍니다.
+  // 그때 참가자를 막지 않도록 몇 번 다시 시도합니다.
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  async function postJson(params, attempts = 4) {
+    let lastText = '';
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const res = await fetch(SHEET_ENDPOINT, { method: 'POST', body: new URLSearchParams(params) });
+        lastText = (await res.text()).trim();
+        if (lastText.startsWith('{')) return JSON.parse(lastText);
+      } catch (_) { /* 네트워크 오류도 재시도 */ }
+      if (i < attempts - 1) await sleep(700 * (i + 1));
+    }
+    const error = new Error('server_unavailable');
+    error.code = 'server_unavailable';
+    throw error;
+  }
+
   async function assertBackendReady() {
     if (backendReady) return;
-    const res = await fetch(SHEET_ENDPOINT, { cache: 'no-store' });
-    const marker = (await res.text()).trim();
-    if (!res.ok || marker !== 'EVENT_API_V2') {
-      const error = new Error('backend_outdated');
-      error.code = 'backend_outdated';
-      throw error;
+    for (let i = 0; i < 4; i++) {
+      try {
+        const res = await fetch(SHEET_ENDPOINT, { cache: 'no-store' });
+        if (res.ok && (await res.text()).trim() === 'EVENT_API_V2') { backendReady = true; return; }
+      } catch (_) { /* 재시도 */ }
+      if (i < 3) await sleep(700 * (i + 1));
     }
-    backendReady = true;
+    const error = new Error('backend_outdated');
+    error.code = 'backend_outdated';
+    throw error;
   }
 
   async function requestDraw() {
     if (!SHEET_ENDPOINT) throw new Error('endpoint_missing');
     await assertBackendReady();
-    const res = await fetch(SHEET_ENDPOINT, {
-      method: 'POST',
-      body: new URLSearchParams({
-        action: 'draw',
-        tools: state.tools.join(', '),
-        clientId: CLIENT_ID,
-        website: '',
-      }),
+    // 재시도해도 같은 requestId면 서버가 이전 추첨 결과를 그대로 돌려줍니다(중복 발급 방지).
+    if (!state.drawRequestId) state.drawRequestId = newId();
+    const data = await postJson({
+      action: 'draw',
+      tools: state.tools.join(', '),
+      clientId: CLIENT_ID,
+      requestId: state.drawRequestId,
+      website: '',
     });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data || !data.ok) {
-      const error = new Error((data && data.error) || 'draw_failed');
-      error.code = (data && data.error) || 'draw_failed';
+    if (!data.ok) {
+      const error = new Error(data.error || 'draw_failed');
+      error.code = data.error || 'draw_failed';
       throw error;
     }
     if (!data.token || ![30, 60, 90].includes(Number(data.days)) || !Array.isArray(data.specials)) {
@@ -531,8 +558,8 @@
       btn.disabled = false;
       btn.textContent = err.code === 'rate_limited'
         ? '잠시 후 다시 시도해 주세요'
-        : err.code === 'backend_outdated'
-          ? '이벤트 서버 업데이트 중 — 잠시 후 다시 시도'
+        : ['backend_outdated', 'server_unavailable'].includes(err.code)
+          ? '연결이 불안정해요 — 한 번 더 눌러 주세요'
           : '별 준비에 실패했어요 — 다시 시도';
     }
   });
@@ -541,6 +568,7 @@
     stopHeartbeat();
     state.drawToken = '';
     state.serverPrize = '';
+    state.drawRequestId = '';   // 다시 고르면 새 추첨
     show('#stepTools');
   });
 
@@ -876,11 +904,7 @@
   // 같은 토큰으로 다시 요청해도 서버가 같은 링크를 돌려줍니다(새로고침 시 재고 소모 없음).
   async function claimMizouLink() {
     if (!state.drawToken) return '';
-    const res = await fetch(SHEET_ENDPOINT, {
-      method: 'POST',
-      body: new URLSearchParams({ action: 'claimMizou', token: state.drawToken }),
-    });
-    const data = await res.json().catch(() => null);
+    const data = await postJson({ action: 'claimMizou', token: state.drawToken });
     return data && data.ok && data.url ? String(data.url) : '';
   }
 

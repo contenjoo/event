@@ -25,7 +25,7 @@ var MIZOU_DAYS_BY_TIER = { 30: 60, 60: 90, 90: 90 }; // 등급 → Mizou 링크 
 var VERSION = 'security-v2';
 var API_MARKER = 'EVENT_API_V2';
 var SHEET_HEADERS = ['접수시각', '이름', '학교', '이메일', '선택 툴', '체험 기간(일)', '특별상 보너스', '당첨 경품', '미리받기'];
-var TOKEN_SHEET_HEADERS = ['토큰', '생성시각', '클라이언트ID', '선택 툴(JSON)', '체험 기간(일)', '특별상(JSON)', '당첨 경품', '사용시각'];
+var TOKEN_SHEET_HEADERS = ['토큰', '생성시각', '클라이언트ID', '선택 툴(JSON)', '체험 기간(일)', '특별상(JSON)', '당첨 경품', '사용시각', '요청ID'];
 var TOOL_IDS = ['Snorkl', 'Redmenta', 'Mizou'];
 var MAX_TOOLS = 2; // 선생님 1인당 최대 선택 도구 수
 var PERIODS = [
@@ -75,6 +75,26 @@ function handleDraw(p) {
 
   var tokenSheet = ensureTokenSheet();
   var now = new Date();
+
+  // 네트워크 오류로 프론트가 같은 draw를 다시 보낼 수 있습니다.
+  // 같은 requestId면 새로 뽑지 않고 이전 결과를 그대로 돌려줍니다(중복 발급·쿨다운 오탐 방지).
+  var requestId = String(p.requestId || '').trim();
+  if (requestId && CLIENT_ID_PATTERN.test(requestId)) {
+    var prior = findRequestRecord(tokenSheet, requestId);
+    if (prior) {
+      try {
+        return json({
+          ok: true,
+          token: prior.token,
+          days: Number(prior.days),
+          specials: JSON.parse(prior.specialsJson),
+          prize: prior.prize,
+          replayed: true,
+        });
+      } catch (err) { /* 기록이 깨졌으면 아래에서 새로 뽑습니다. */ }
+    }
+  }
+
   if (hasRecentDraw(tokenSheet, clientId, now)) {
     return json({ ok: false, error: 'rate_limited' });
   }
@@ -92,6 +112,7 @@ function handleDraw(p) {
     JSON.stringify(specials),
     safeCellText(prize),
     '',
+    safeCellText(requestId),
   ]);
   // 토큰 저장이 성공한 draw만 TV 별자리에 반영 (LockService 내부라 동시성 안전)
   incrementStarCount();
@@ -303,12 +324,22 @@ function hasRecentDraw(sheet, clientId, now) {
 }
 
 function findTokenRecord(sheet, token) {
+  return findRecordBy(sheet, 0, token);
+}
+
+// 같은 요청이 재전송됐는지 확인용 (요청ID 열)
+function findRequestRecord(sheet, requestId) {
+  return findRecordBy(sheet, 8, requestId);
+}
+
+function findRecordBy(sheet, columnIndex, value) {
   if (sheet.getLastRow() <= 1) return null;
-  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
+  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, TOKEN_SHEET_HEADERS.length).getValues();
   for (var i = rows.length - 1; i >= 0; i--) {
-    if (String(rows[i][0]) !== token) continue;
+    if (!value || String(rows[i][columnIndex]) !== value) continue;
     return {
       rowNumber: i + 2,
+      token: String(rows[i][0]),
       createdAt: rows[i][1],
       clientId: String(rows[i][2]),
       toolsJson: String(rows[i][3]),
@@ -316,6 +347,7 @@ function findTokenRecord(sheet, token) {
       specialsJson: String(rows[i][5]),
       prize: String(rows[i][6]),
       consumedAt: rows[i][7],
+      requestId: String(rows[i][8] || ''),
     };
   }
   return null;
