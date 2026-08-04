@@ -246,41 +246,58 @@
     font-size: 15px; line-height: 1.5;
   }
 
-  /* ---- redeem cards ---- */
+  /* ---- redeem cards ----
+     위계: 제목 17.5 → 설명 13.5 → ①골드솔리드(1차) → ②고스트(2차) → 보조 버튼 → URL(접힘)
+     간격으로 [제목·설명] [행동 ①②] [보조·URL] 3그룹을 구분합니다. */
   .rcard {
     background: #141934; border: 1px solid var(--border); border-radius: 14px;
-    padding: 15px 16px; margin-bottom: 14px;
+    padding: 16px 16px 14px; margin-bottom: 14px;
   }
-  .rcard .rtitle { font-size: 15.5px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .rcard .rtitle { font-size: 17.5px; font-weight: 800; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
   .rcard .rtitle .rmonths { color: var(--gold); }
+  .rcard .rabout { margin-top: 4px; font-size: 13.5px; color: #c3cbf0; line-height: 1.55; }
+  /* ①이 첫 행동 — 카드에서 가장 눈에 띄는 골드 솔리드로. */
+  .rcard .rsignup {
+    display: block; text-align: center; text-decoration: none;
+    margin: 14px 0 6px; padding: 13px; border-radius: 12px;
+    font-size: 15.5px; font-weight: 800; color: #1a1f3c;
+    background: linear-gradient(135deg, #ffd36e, #ffb84d); border: none;
+  }
+  .rcard .rsignup:active { transform: translateY(1px); }
   .rcard .rgo {
     display: block; text-align: center; text-decoration: none;
-    margin: 12px 0 10px; padding: 13px; border-radius: 12px;
+    margin: 14px 0 14px; padding: 13px; border-radius: 12px;
     font-size: 15.5px; font-weight: 800; color: #fff;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    background: linear-gradient(135deg, #e14a7b, #5b4bd6);
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  }
+  /* ①이 있는 카드의 ②는 세컨더리로 — 가입 전에 1회용 링크를 먼저 누르지 않게. */
+  .rcard .rsignup + .rgo {
+    margin-top: 6px; background: #1d2347; border: 1px solid var(--accent-2);
+    color: var(--text); text-shadow: none;
   }
   .rcard .rgo:active { transform: translateY(1px); }
+  .rcard .rsignup b, .rcard .rgo b { opacity: 1; margin-right: 5px; font-size: 1.05em; }
   .rcard .rmini { display: flex; gap: 8px; }
   .rcard .rmini button {
-    flex: 1; padding: 10px; border-radius: 10px; cursor: pointer;
+    flex: 1; padding: 13px 8px; min-height: 44px; border-radius: 10px; cursor: pointer;
     font-size: 13px; font-weight: 700; font-family: inherit;
     color: var(--text); background: #1d2347; border: 1px solid var(--border);
     transition: border-color .15s;
   }
   .rcard .rmini button:hover { border-color: var(--accent-2); }
   .rcard .rmini button.done { border-color: var(--good); color: var(--good); }
-  .rcard .rurl { margin-top: 9px; font-size: 11.5px; color: var(--muted); word-break: break-all; text-align: center; }
-  .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
-  .rcard .rabout { margin-top: 7px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
-  /* ① 회원가입 → ② 체험권 순서를 버튼 두 개로 보여줍니다. */
-  .rcard .rsignup {
-    display: block; text-align: center; text-decoration: none;
-    margin: 11px 0 8px; padding: 12px; border-radius: 12px;
-    font-size: 14.5px; font-weight: 800; color: var(--gold);
-    background: rgba(255,211,110,.1); border: 1.5px solid rgba(255,211,110,.5);
+  /* URL은 참고용 — 접어 두고 필요할 때만 펼칩니다(카드 길이 절약). */
+  .rcard details.rurl { margin-top: 8px; text-align: center; }
+  .rcard details.rurl summary {
+    cursor: pointer; list-style: none; font-size: 12.5px; color: var(--muted);
+    text-decoration: underline; text-underline-offset: 3px;
   }
-  .rcard .rsignup:active { transform: translateY(1px); }
-  .rcard .rsignup b, .rcard .rgo b { opacity: .85; margin-right: 3px; }
+  .rcard details.rurl summary::-webkit-details-marker { display: none; }
+  .rcard details.rurl div { margin-top: 6px; font-size: 13px; color: #c3cbf0; word-break: break-all; }
+  .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
+  /* 당첨 화면 안내문은 반드시 읽어야 해서 한 단계 승격 (다른 스텝 .lead는 그대로) */
+  #stepRedeem .lead { font-size: 14px; color: #c3cbf0; line-height: 1.6; }
 
   canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 26px; }
@@ -337,14 +354,13 @@
     <section class="step" id="stepRedeem">
       <div class="step-label">STEP 3 / 3</div>
       <h2>🎉 체험권 당첨!</h2>
-      <p class="lead">각 서비스에 <b style="color:var(--gold);">회원가입을 먼저</b> 하신 뒤 링크를 열어 주세요. 폰에 저장해 두고 나중에 쓰셔도 돼요.</p>
+      <p class="lead">① <b style="color:var(--gold);">회원가입</b> → ② <b>체험권 받기</b> 순서로 눌러 주세요.<br/>지금 안 하셔도 폰에 저장해 두면 됩니다.</p>
 
       <div id="redeemCards"></div>
 
       <div class="notice">
-        ⚠️ <b>“지금 시작하기”</b>를 누르면 체험이 바로 시작돼요.<br/>
-        링크는 <b>한 번만</b> 사용할 수 있어요. 나중에 쓰실 거면 <b>저장·복사</b>만 해두세요.<br/>
-        링크가 안 열리는 등 문제가 있으면 <b>joo@learntoday.kr</b> 로 문의해 주세요.
+        ⚠️ 링크는 <b>한 번만</b> 열려요 — 나중에 쓰실 분은 지금은 <b>저장·복사만</b>!<br/>
+        문의: <b>joo@learntoday.kr</b>
       </div>
     </section>
 
@@ -366,17 +382,17 @@
     {
       id: 'Snorkl', emoji: '🎤', signup: 'snorkl.app', signupUrl: 'https://teacher.snorkl.app/signup',
       desc: '학생의 생각을 보여주고 싶어요 · 음성·화이트보드 녹화 + AI 피드백',
-      about: '학생이 말과 그림으로 생각을 설명하면 AI가 바로 피드백을 줘요. 모든 학생의 답을 한 화면에서 확인할 수 있어요.',
+      about: '학생이 말·그림으로 설명하면 AI가 바로 피드백해요.',
     },
     {
       id: 'Redmenta', emoji: '📝', signup: 'redmenta.com', signupUrl: 'https://app.redmenta.com/ko/login',
       desc: '수업 준비와 평가를 가볍게 하고 싶어요 · AI 워크시트·퀴즈',
-      about: '수업 자료나 주제만 넣으면 AI가 워크시트·퀴즈를 만들어 줘요. 채점과 결과 분석도 자동이에요.',
+      about: '주제만 넣으면 AI가 워크시트·퀴즈를 만들고 채점까지 해요.',
     },
     {
       id: 'Mizou', emoji: '🤖', signup: 'mizou.com', signupUrl: 'https://mizou.com/education',
       desc: '학생과 즐겁게 대화하고 싶어요 · 우리 반 맞춤 교육용 AI 챗봇',
-      about: '우리 반 수업에 맞는 AI 챗봇을 직접 만들어요. 학생 대화 내용을 선생님이 확인할 수 있어 안전해요.',
+      about: '우리 반 맞춤 AI 챗봇을 만들어요. 학생 대화도 선생님이 확인 가능해요.',
     },
   ];
 
@@ -907,16 +923,16 @@
       cardTitle(item) +
       (item.signupUrl
         ? `<a class="rsignup" href="${escapeHtml(item.signupUrl)}" target="_blank" rel="noopener">` +
-            `<b>①</b> ${escapeHtml(item.signup)} 회원가입 하러 가기 →</a>`
+            `<b>①</b> 먼저 회원가입 (${escapeHtml(item.signup)}) →</a>`
         : '') +
       `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">` +
-        `${item.signupUrl ? '<b>②</b> 가입 후 체험권 받기 →' : '🚀 지금 시작하기 →'}</a>` +
+        `${item.signupUrl ? '<b>②</b> 체험권 받기 →' : '🚀 체험 시작하기 →'}</a>` +
       `<div class="rmini">` +
-        `<button type="button" data-act="share">📤 폰에 저장</button>` +
+        `<button type="button" data-act="share">📤 나에게 보내기</button>` +
         `<button type="button" data-act="copy">🔗 링크 복사</button>` +
-        `<button type="button" data-act="image">🖼️ 이미지</button>` +
+        `<button type="button" data-act="image">🖼️ 이미지 저장</button>` +
       `</div>` +
-      `<div class="rurl">${escapeHtml(item.url)}</div>`;
+      `<details class="rurl"><summary>링크 주소 보기</summary><div>${escapeHtml(item.url)}</div></details>`;
     const [shareB, copyB, imgB] = card.querySelectorAll('.rmini button');
     shareB.addEventListener('click', () => shareLink(item, shareB));
     copyB.addEventListener('click', () => copyLink(item.url, copyB));
