@@ -297,7 +297,7 @@
         <span class="rh-emoji">🎁</span>
         <span>
           <b>수업 고민을 하나 고르고 별을 찾아보세요</b>
-          <span class="rh-sub">1~3개월 체험권과 스티커·배지·타올을 드립니다</span>
+          <span class="rh-sub">최대 4개월 체험권과 스티커·배지·타올을 드립니다</span>
         </span>
       </div>
       <div id="toolList"></div>
@@ -380,12 +380,12 @@
     { type: 'period', days: 90, emoji: '🌠', name: '최고의 별',    short: '최고',    weight: 20 },
   ];
 
-  // 등급(days) → 도구별 지급 개월. Snorkl은 1개월을 빼고 2~3개월로 운영합니다.
-  // 4개월 리퍼럴 링크가 준비되면 Snorkl 90을 4로 바꾸고 REDEEM에 링크만 넣으면 됩니다.
+  // 등급(days) → 도구별 지급 개월.
+  // Snorkl·Redmenta는 1개월을 빼고 2~4개월, Mizou는 전용 링크가 없어 1~3개월입니다.
   const TOOL_MONTHS = {
-    Snorkl:   { 30: 2, 60: 3, 90: 3 },
-    Redmenta: { 30: 1, 60: 2, 90: 3 },
-    Mizou:    { 30: 1, 60: 2, 90: 3 },
+    Snorkl:   { 30: 2, 60: 3, 90: 4 },
+    Redmenta: { 30: 2, 60: 3, 90: 4 },
+    Mizou:    { 30: 2, 60: 3, 90: 3 },
   };
   const monthsFor = (toolId, days) => (TOOL_MONTHS[toolId] || {})[days] || Math.round(days / 30);
 
@@ -555,7 +555,7 @@
       ? '<span class="chip">☄️ 운이 좋으면 별똥별 추가 선물</span>'
       : '';
     $('#odds').innerHTML =
-      '<span class="chip">⭐ 같은 별 3개를 맞추면 1~3개월 체험권</span>' + bonusChip;
+      '<span class="chip">⭐ 같은 별 3개를 맞추면 최대 4개월 체험권</span>' + bonusChip;
   }
 
   // ---------- step 2: match-3 scratch ----------
@@ -784,23 +784,19 @@
   // 빈 문자열('')이면 아직 링크 미확보 → 화면에 "준비 중"으로 표시.
   const REDEEM = {
     tools: {
-      // Snorkl은 1개월 없이 2~3개월 — 30일 링크(BYEMZpaM)는 사용하지 않습니다.
+      // 1개월 링크(Snorkl BYEMZpaM, Redmenta WVgTF7VP)는 사용하지 않습니다.
       Snorkl: {
         30: 'https://teameducator.org/r/52EbF3Y9',  // 2개월
         60: 'https://teameducator.org/r/hf9bs3TF',  // 3개월
-        90: 'https://teameducator.org/r/hf9bs3TF',  // 3개월
+        90: 'https://teameducator.org/r/e8YweQ7H',  // 4개월
       },
       Redmenta: {
-        30: 'https://teameducator.org/r/WVgTF7VP',
-        60: 'https://teameducator.org/r/gfFCsfTz',
-        90: 'https://teameducator.org/r/hh59W7mf',
+        30: 'https://teameducator.org/r/gfFCsfTz',  // 2개월
+        60: 'https://teameducator.org/r/hh59W7mf',  // 3개월
+        90: 'https://teameducator.org/r/usm29X7u',  // 4개월
       },
-      // Mizou는 신청 페이지 접수 후 당첨 기간에 맞춰 발급됩니다.
-      Mizou: {
-        30: 'https://www.learntoday.co.kr/mizou',
-        60: 'https://www.learntoday.co.kr/mizou',
-        90: 'https://www.learntoday.co.kr/mizou',
-      },
+      // Mizou는 1회용 링크라 서버 재고에서 하나씩 배부합니다(claimMizou).
+      Mizou: { 30: 'dynamic', 60: 'dynamic', 90: 'dynamic' },
     },
     bonuses: {
       'Snorkl 과제 10개 추가': 'https://teameducator.org/r/wC6CwS7k',
@@ -812,14 +808,12 @@
     const items = state.tools.map(id => {
       const t = TOOLS.find(x => x.id === id);
       const url = (REDEEM.tools[id] || {})[days] || '';
-      const note = id === 'Mizou'
-        ? '신청 페이지에서 접수하시면 당첨 기간에 맞춰 계정을 만들어 드려요.'
-        : '';
       return {
+        id,
         emoji: t ? t.emoji : '🎁',
         title: `${id} ${monthsFor(id, days)}개월 체험권`,
         about: t ? t.about : '',
-        url, note,
+        url, note: '',
       };
     });
     state.bonuses.forEach(s => {
@@ -834,32 +828,60 @@
     redeemItems().forEach(item => {
       const card = document.createElement('div');
       card.className = 'rcard';
-      if (!item.url || item.url === 'booth') {
-        card.innerHTML =
-          `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
-          `<div class="rpending">${item.url === 'booth'
-            ? '🎫 이 화면(또는 저장한 쿠폰 이미지)을 부스 직원에게 보여주시면 바로 발급해 드려요.'
-            : '🔧 링크 준비 중이에요 — 부스 직원에게 문의해 주세요.'}</div>`;
-        wrap.appendChild(card);
+      wrap.appendChild(card);
+
+      if (item.url === 'dynamic') {           // Mizou — 서버 재고에서 1회용 링크를 받아옵니다.
+        renderPending(card, item, '🎟️ 전용 링크를 준비하는 중이에요…');
+        claimMizouLink()
+          .then(url => {
+            if (url) renderLinkCard(card, Object.assign({}, item, { url }));
+            else renderPending(card, item, '🔧 준비된 링크가 모두 나갔어요 — 부스 직원에게 문의해 주세요.');
+          })
+          .catch(() => renderPending(card, item, '🔧 링크를 불러오지 못했어요 — 부스 직원에게 문의해 주세요.'));
         return;
       }
-      card.innerHTML =
-        `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
-        (item.about ? `<div class="rabout">${escapeHtml(item.about)}</div>` : '') +
-        `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🚀 지금 시작하기 →</a>` +
-        (item.note ? `<div class="rpending" style="margin:0 0 8px;">💡 ${escapeHtml(item.note)}</div>` : '') +
-        `<div class="rmini">` +
-          `<button type="button" data-act="share">📤 폰에 저장</button>` +
-          `<button type="button" data-act="copy">🔗 링크 복사</button>` +
-          `<button type="button" data-act="image">🖼️ 이미지</button>` +
-        `</div>` +
-        `<div class="rurl">${escapeHtml(item.url)}</div>`;
-      const [shareB, copyB, imgB] = card.querySelectorAll('.rmini button');
-      shareB.addEventListener('click', () => shareLink(item, shareB));
-      copyB.addEventListener('click', () => copyLink(item.url, copyB));
-      imgB.addEventListener('click', () => saveCoupon(item, imgB));
-      wrap.appendChild(card);
+      if (!item.url) {
+        renderPending(card, item, '🔧 링크 준비 중이에요 — 부스 직원에게 문의해 주세요.');
+        return;
+      }
+      renderLinkCard(card, item);
     });
+  }
+
+  function cardTitle(item) {
+    return `<div class="rtitle">${item.emoji} <span class="rmonths">${escapeHtml(item.title)}</span></div>` +
+      (item.about ? `<div class="rabout">${escapeHtml(item.about)}</div>` : '');
+  }
+
+  function renderPending(card, item, message) {
+    card.innerHTML = cardTitle(item) + `<div class="rpending">${escapeHtml(message)}</div>`;
+  }
+
+  function renderLinkCard(card, item) {
+    card.innerHTML =
+      cardTitle(item) +
+      `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🚀 지금 시작하기 →</a>` +
+      `<div class="rmini">` +
+        `<button type="button" data-act="share">📤 폰에 저장</button>` +
+        `<button type="button" data-act="copy">🔗 링크 복사</button>` +
+        `<button type="button" data-act="image">🖼️ 이미지</button>` +
+      `</div>` +
+      `<div class="rurl">${escapeHtml(item.url)}</div>`;
+    const [shareB, copyB, imgB] = card.querySelectorAll('.rmini button');
+    shareB.addEventListener('click', () => shareLink(item, shareB));
+    copyB.addEventListener('click', () => copyLink(item.url, copyB));
+    imgB.addEventListener('click', () => saveCoupon(item, imgB));
+  }
+
+  // 같은 토큰으로 다시 요청해도 서버가 같은 링크를 돌려줍니다(새로고침 시 재고 소모 없음).
+  async function claimMizouLink() {
+    if (!state.drawToken) return '';
+    const res = await fetch(SHEET_ENDPOINT, {
+      method: 'POST',
+      body: new URLSearchParams({ action: 'claimMizou', token: state.drawToken }),
+    });
+    const data = await res.json().catch(() => null);
+    return data && data.ok && data.url ? String(data.url) : '';
   }
 
   function markDone(btn, label) {

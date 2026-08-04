@@ -19,6 +19,9 @@
 var SHEET_NAME = '응모';
 var TOKEN_SHEET_NAME = '응모_토큰';
 var COUNTER_SHEET_NAME = '별_카운트'; // TV 별자리용 익명 참여 카운터 (개인정보 없음)
+var MIZOU_SHEET_NAME = 'Mizou_링크'; // Mizou는 1회용 링크라 재고에서 하나씩 꺼내 씁니다.
+var MIZOU_HEADERS = ['기간(일)', '링크', '발급시각', '토큰'];
+var MIZOU_DAYS_BY_TIER = { 30: 60, 60: 90, 90: 90 }; // 등급 → Mizou 링크 기간(2~3개월)
 var VERSION = 'security-v2';
 var API_MARKER = 'EVENT_API_V2';
 var SHEET_HEADERS = ['접수시각', '이름', '학교', '이메일', '선택 툴', '체험 기간(일)', '특별상 보너스', '당첨 경품', '미리받기'];
@@ -53,6 +56,7 @@ function doPost(e) {
     var action = String(p.action || '').trim();
     if (action === 'draw') return handleDraw(p);
     if (action === 'submit') return handleSubmit(p);
+    if (action === 'claimMizou') return handleClaimMizou(p);
     return json({ ok: false, error: 'invalid_action' });
   } catch (err) {
     Logger.log(err && err.stack ? err.stack : err);
@@ -169,6 +173,60 @@ function handleSubmit(p) {
   // LockService 안에서 사용 시각을 기록해 같은 토큰의 재사용을 차단합니다.
   consumeToken(tokenSheet, record.rowNumber);
   return json({ ok: true });
+}
+
+// Mizou 1회용 링크 배부 — 토큰 하나당 링크 하나. 같은 토큰이 다시 오면 같은 링크를 돌려줍니다.
+function handleClaimMizou(p) {
+  var token = String(p.token || '').trim();
+  if (!TOKEN_PATTERN.test(token)) return json({ ok: false, error: 'invalid_token' });
+
+  var tokenSheet = ensureTokenSheet();
+  var record = findTokenRecord(tokenSheet, token);
+  if (!record) return json({ ok: false, error: 'draw_expired' });
+
+  var createdAt = record.createdAt instanceof Date ? record.createdAt : new Date(record.createdAt);
+  if (!createdAt || isNaN(createdAt.getTime()) || Date.now() - createdAt.getTime() > TOKEN_TTL_MILLISECONDS) {
+    return json({ ok: false, error: 'draw_expired' });
+  }
+
+  // 등급은 토큰에 저장된 서버 결과만 사용합니다(브라우저 값 불신).
+  var tierDays = Number(record.days);
+  var wantDays = MIZOU_DAYS_BY_TIER[tierDays];
+  if (!wantDays) return json({ ok: false, error: 'invalid_token' });
+
+  var tools;
+  try { tools = JSON.parse(record.toolsJson); } catch (err) { return json({ ok: false, error: 'invalid_token' }); }
+  if (!tools || tools.indexOf('Mizou') < 0) return json({ ok: false, error: 'not_eligible' });
+
+  var sheet = ensureMizouSheet();
+  if (sheet.getLastRow() <= 1) return json({ ok: false, error: 'sold_out' });
+
+  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+  var firstFree = -1;
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i][3]) === token) {
+      return json({ ok: true, url: String(rows[i][1]), days: Number(rows[i][0]) });
+    }
+    if (firstFree < 0 && Number(rows[i][0]) === wantDays && !rows[i][2]) firstFree = i;
+  }
+  if (firstFree < 0) return json({ ok: false, error: 'sold_out' });
+
+  var rowNumber = firstFree + 2;
+  sheet.getRange(rowNumber, 3).setValue(new Date());
+  sheet.getRange(rowNumber, 4).setValue(token);
+  return json({ ok: true, url: String(rows[firstFree][1]), days: wantDays });
+}
+
+function ensureMizouSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(MIZOU_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(MIZOU_SHEET_NAME);
+    sheet.appendRow(MIZOU_HEADERS);
+    sheet.setFrozenRows(1);
+  }
+  if (sheet.getLastRow() === 0) sheet.appendRow(MIZOU_HEADERS);
+  return sheet;
 }
 
 function parseTools(raw) {
