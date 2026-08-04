@@ -306,6 +306,15 @@
   .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
   /* 같은 서비스 두 번째 카드 — 가입을 또 시키지 않고 안내만 */
   .rcard .rsame { margin-top: 12px; font-size: 12.5px; color: var(--good); text-align: center; }
+  /* 커뮤니티 안내 — 체험권과 무관하게 언제든 들어올 수 있는 곳 */
+  .rcard .rcomm {
+    display: block; margin-top: 12px; padding: 11px; border-radius: 10px;
+    text-align: center; text-decoration: none;
+    font-size: 12.5px; font-weight: 700; line-height: 1.5;
+    color: #ffe08a; background: rgba(255,211,110,.07);
+    border: 1px dashed rgba(255,211,110,.4);
+  }
+  .rcard .rcomm:active { transform: translateY(1px); }
   /* 당첨 화면 안내문은 반드시 읽어야 해서 한 단계 승격 (다른 스텝 .lead는 그대로) */
   #stepRedeem .lead { font-size: 14px; color: #c3cbf0; line-height: 1.6; }
 
@@ -391,6 +400,7 @@
   const TOOLS = [
     {
       id: 'Snorkl', emoji: '🎤', signup: 'snorkl.app', signupUrl: 'https://teacher.snorkl.app/signup',
+      community: { url: 'https://open.kakao.com/o/gkyPvfWh', label: 'Snorklers 한국 커뮤니티 (오픈채팅)' },
       desc: '학생의 생각을 보여주고 싶어요 · 음성·화이트보드 녹화 + AI 피드백',
       about: '학생이 말·그림으로 설명하면 AI가 바로 피드백해요.',
     },
@@ -911,6 +921,7 @@
         cta: s.full.indexOf('과제') >= 0 ? '과제 10개 추가받기' : '보너스 받기',
         signup: owner ? owner.signup : '',
         signupUrl: owner ? owner.signupUrl : '',
+        community: owner ? owner.community : null,
         url: REDEEM.bonuses[s.full] || '',
         taken: false,
       };
@@ -930,6 +941,7 @@
         cta: '체험권 받기',
         signup: t ? t.signup : '',
         signupUrl: t ? t.signupUrl : '',
+        community: t ? t.community : null,
         url: (REDEEM.tools[id] || {})[days] || '',
         note: '',
       });
@@ -945,11 +957,17 @@
     wrap.innerHTML = '';
     // 같은 서비스가 두 장(예: Snorkl 과제 + 체험권) 나오면 회원가입은 첫 장에서만 안내합니다.
     const signupShown = new Set();
+    const communityShown = new Set();
     redeemItems().forEach(raw => {
       const item = Object.assign({}, raw);
       if (item.signupUrl) {
         if (signupShown.has(item.signupUrl)) item.signupDone = true;
         else signupShown.add(item.signupUrl);
+      }
+      // 커뮤니티 안내도 서비스당 한 번만
+      if (item.community) {
+        if (communityShown.has(item.community.url)) item.community = null;
+        else communityShown.add(item.community.url);
       }
       const card = document.createElement('div');
       card.className = 'rcard';
@@ -999,7 +1017,11 @@
         `<button type="button" data-act="copy">🔗 링크 복사</button>` +
         `<button type="button" data-act="image">🖼️ 이미지 저장</button>` +
       `</div>` +
-      `<details class="rurl"><summary>링크 주소 보기</summary><div>${escapeHtml(item.url)}</div></details>`;
+      `<details class="rurl"><summary>링크 주소 보기</summary><div>${escapeHtml(item.url)}</div></details>` +
+      (item.community
+        ? `<a class="rcomm" href="${escapeHtml(item.community.url)}" target="_blank" rel="noopener">` +
+            `💬 ${escapeHtml(item.community.label)} — 언제든 들어오세요</a>`
+        : '');
     const [shareB, copyB, imgB] = card.querySelectorAll('.rmini button');
     shareB.addEventListener('click', () => shareLink(item, shareB));
     copyB.addEventListener('click', () => copyLink(item.url, copyB));
@@ -1024,7 +1046,8 @@
     const steps = item.signupUrl
       ? `\n① 회원가입: ${item.signupUrl}\n② 가입 후 아래 링크를 열어 주세요.`
       : '';
-    const text = `${item.title} 체험권${steps}\n${item.url}\n이 링크는 한 번만 사용할 수 있어요.\n문제가 있으면 joo@learntoday.kr 로 문의해 주세요.`;
+    const comm = item.community ? `\n${item.community.label}: ${item.community.url}` : '';
+    const text = `${item.title} 체험권${steps}\n${item.url}\n이 링크는 한 번만 사용할 수 있어요.${comm}\n문제가 있으면 joo@learntoday.kr 로 문의해 주세요.`;
     if (navigator.share) {
       try { await navigator.share({ title: `${item.title} 체험권`, text, url: item.url }); }
       catch (_) {}
