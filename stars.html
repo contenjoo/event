@@ -272,12 +272,15 @@
   .rcard .rurl { margin-top: 9px; font-size: 11.5px; color: var(--muted); word-break: break-all; text-align: center; }
   .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
   .rcard .rabout { margin-top: 7px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
-  .rcard .rsteps {
-    margin-top: 10px; padding: 10px 12px; border-radius: 10px;
-    background: rgba(255,211,110,.09); border: 1px solid rgba(255,211,110,.35);
-    font-size: 12.5px; line-height: 1.7; color: var(--text);
+  /* ① 회원가입 → ② 체험권 순서를 버튼 두 개로 보여줍니다. */
+  .rcard .rsignup {
+    display: block; text-align: center; text-decoration: none;
+    margin: 11px 0 8px; padding: 12px; border-radius: 12px;
+    font-size: 14.5px; font-weight: 800; color: var(--gold);
+    background: rgba(255,211,110,.1); border: 1.5px solid rgba(255,211,110,.5);
   }
-  .rcard .rsteps b { color: var(--gold); }
+  .rcard .rsignup:active { transform: translateY(1px); }
+  .rcard .rsignup b, .rcard .rgo b { opacity: .85; margin-right: 3px; }
 
   canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px 0 26px; }
@@ -361,17 +364,17 @@
   // desc: STEP 1 선택지(선생님 고민 문장) / about: 당첨 카드에서 보여줄 기능 소개
   const TOOLS = [
     {
-      id: 'Snorkl', emoji: '🎤', signup: 'snorkl.app',
+      id: 'Snorkl', emoji: '🎤', signup: 'snorkl.app', signupUrl: 'https://teacher.snorkl.app/signup',
       desc: '학생의 생각을 보여주고 싶어요 · 음성·화이트보드 녹화 + AI 피드백',
       about: '학생이 말과 그림으로 생각을 설명하면 AI가 바로 피드백을 줘요. 모든 학생의 답을 한 화면에서 확인할 수 있어요.',
     },
     {
-      id: 'Redmenta', emoji: '📝', signup: 'redmenta.com',
+      id: 'Redmenta', emoji: '📝', signup: 'redmenta.com', signupUrl: 'https://app.redmenta.com/ko/login',
       desc: '수업 준비와 평가를 가볍게 하고 싶어요 · AI 워크시트·퀴즈',
       about: '수업 자료나 주제만 넣으면 AI가 워크시트·퀴즈를 만들어 줘요. 채점과 결과 분석도 자동이에요.',
     },
     {
-      id: 'Mizou', emoji: '🤖', signup: 'mizou.com',
+      id: 'Mizou', emoji: '🤖', signup: 'mizou.com', signupUrl: 'https://mizou.com',
       desc: '학생과 즐겁게 대화하고 싶어요 · 우리 반 맞춤 교육용 AI 챗봇',
       about: '우리 반 수업에 맞는 AI 챗봇을 직접 만들어요. 학생 대화 내용을 선생님이 확인할 수 있어 안전해요.',
     },
@@ -848,6 +851,7 @@
         title: `${id} ${monthsFor(id, days)}개월 체험권`,
         about: t ? t.about : '',
         signup: t ? t.signup : '',
+        signupUrl: t ? t.signupUrl : '',
         url, note: '',
       };
     });
@@ -856,6 +860,7 @@
         emoji: '☄️',
         title: `별똥별 · ${s.full}`,
         signup: s.full.indexOf('Snorkl') >= 0 ? 'snorkl.app' : '',
+        signupUrl: s.full.indexOf('Snorkl') >= 0 ? 'https://teacher.snorkl.app/signup' : '',
         url: REDEEM.bonuses[s.full] || '',
       });
     });
@@ -900,10 +905,12 @@
   function renderLinkCard(card, item) {
     card.innerHTML =
       cardTitle(item) +
-      (item.signup
-        ? `<div class="rsteps"><b>①</b> <b>${escapeHtml(item.signup)}</b>에서 먼저 회원가입<br/><b>②</b> 가입한 계정으로 로그인한 뒤 아래 링크 열기</div>`
+      (item.signupUrl
+        ? `<a class="rsignup" href="${escapeHtml(item.signupUrl)}" target="_blank" rel="noopener">` +
+            `<b>①</b> ${escapeHtml(item.signup)} 회원가입 하러 가기 →</a>`
         : '') +
-      `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🚀 지금 시작하기 →</a>` +
+      `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">` +
+        `${item.signupUrl ? '<b>②</b> 가입 후 체험권 받기 →' : '🚀 지금 시작하기 →'}</a>` +
       `<div class="rmini">` +
         `<button type="button" data-act="share">📤 폰에 저장</button>` +
         `<button type="button" data-act="copy">🔗 링크 복사</button>` +
@@ -931,7 +938,9 @@
   }
 
   async function shareLink(item, btn) {
-    const steps = item.signup ? `\n① ${item.signup} 에서 회원가입 후 ② 이 링크를 열어 주세요.` : '';
+    const steps = item.signupUrl
+      ? `\n① 회원가입: ${item.signupUrl}\n② 가입 후 아래 링크를 열어 주세요.`
+      : '';
     const text = `${item.title} 체험권${steps}\n${item.url}\n이 링크는 한 번만 사용할 수 있어요.\n문제가 있으면 joo@learntoday.kr 로 문의해 주세요.`;
     if (navigator.share) {
       try { await navigator.share({ title: `${item.title} 체험권`, text, url: item.url }); }
