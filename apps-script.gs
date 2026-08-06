@@ -75,11 +75,14 @@ function handleDraw(p) {
 
   var tokenSheet = ensureTokenSheet();
   var now = new Date();
+  var cache = CacheService.getScriptCache();
 
   // 네트워크 오류로 프론트가 같은 draw를 다시 보낼 수 있습니다.
   // 같은 requestId면 새로 뽑지 않고 이전 결과를 그대로 돌려줍니다(중복 발급·쿨다운 오탐 방지).
+  // 첫 시도에는 조회하지 않고, 프론트가 재시도임을 알릴 때(retry=1)나 캐시에 흔적이 있을 때만 시트를 뒤집니다.
   var requestId = String(p.requestId || '').trim();
-  if (requestId && CLIENT_ID_PATTERN.test(requestId)) {
+  var isRetry = String(p.retry || '') === '1';
+  if (requestId && CLIENT_ID_PATTERN.test(requestId) && (isRetry || cache.get('req_' + requestId))) {
     var prior = findRequestRecord(tokenSheet, requestId);
     if (prior) {
       try {
@@ -95,9 +98,11 @@ function handleDraw(p) {
     }
   }
 
-  if (hasRecentDraw(tokenSheet, clientId, now)) {
+  // 연타 방지는 캐시로 — 시트를 훑지 않아 응답이 빨라집니다.
+  if (cache.get('cd_' + clientId)) {
     return json({ ok: false, error: 'rate_limited' });
   }
+  cache.put('cd_' + clientId, '1', Math.ceil(DRAW_COOLDOWN_MILLISECONDS / 1000));
 
   var period = pickWeighted(PERIODS);
   var specials = rollSpecials(tools);
@@ -116,6 +121,8 @@ function handleDraw(p) {
   ]);
   // 토큰 저장이 성공한 draw만 TV 별자리에 반영 (LockService 내부라 동시성 안전)
   incrementStarCount();
+  // 재시도가 오면 시트를 뒤져 같은 결과를 돌려줄 수 있게 흔적을 남깁니다.
+  if (requestId) cache.put('req_' + requestId, '1', 1800);
 
   return json({
     ok: true,
@@ -426,38 +433,52 @@ function json(obj) {
 // ?action=count 는 TV 별자리 화면용으로 접수 건수만 반환합니다(개인정보 없음).
 function doGet(e) {
   var p = (e && e.parameter) || {};
-  if (String(p.action || '').trim() === 'count') {
-    return json({ ok: true, count: countEntries() });
-  }
+  var action = String(p.action || '').trim();
+  if (action === 'count') return json({ ok: true, count: countEntries() });
+  if (action === 'stats') return json(buildStats());   // 부스 운영용 집계(개인정보 없음)
   return ContentService.createTextOutput(API_MARKER);
 }
 
-// TV 별자리 카운트 — 익명 참여 카운터(별_카운트 시트 B1) 값.
+var COUNTER_PROPERTY = 'starCount';
+
+// TV 별자리 카운트 — 스크립트 속성에 두어 시트 왕복 없이 읽고 씁니다.
 function countEntries() {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty(COUNTER_PROPERTY);
+  if (raw === null) {                       // 예전에 쓰던 시트 값이 있으면 한 번만 옮겨옵니다.
+    var migrated = readCounterSheetValue();
+    props.setProperty(COUNTER_PROPERTY, String(migrated));
+    return migrated;
+  }
+  var value = Number(raw);
+  return isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function readCounterSheetValue() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COUNTER_SHEET_NAME);
   if (!sheet) return 0;
   var value = Number(sheet.getRange(1, 2).getValue());
   return isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
-function ensureCounterSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(COUNTER_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(COUNTER_SHEET_NAME);
-    sheet.getRange(1, 1).setValue('참여 수');
-    sheet.getRange(1, 2).setValue(0);
-    try { sheet.hideSheet(); } catch (_) {}
-  }
-  return sheet;
-}
-
 // handleDraw의 LockService 안에서만 호출 — 동시 증가 유실 없음.
 function incrementStarCount() {
-  var sheet = ensureCounterSheet();
-  var cell = sheet.getRange(1, 2);
-  var current = Number(cell.getValue());
-  cell.setValue((isFinite(current) && current > 0 ? Math.floor(current) : 0) + 1);
+  var next = countEntries() + 1;
+  PropertiesService.getScriptProperties().setProperty(COUNTER_PROPERTY, String(next));
+  return next;
+}
+
+// 지금까지 나간 수량 — 추첨 수와 Mizou 링크 재고 현황.
+function buildStats() {
+  var stats = { ok: true, draws: countEntries(), mizouIssued: 0, mizouLeft: 0 };
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MIZOU_SHEET_NAME);
+  if (sheet && sheet.getLastRow() > 1) {
+    var rows = sheet.getRange(2, 3, sheet.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i][0]) stats.mizouIssued++; else stats.mizouLeft++;
+    }
+  }
+  return stats;
 }
 
 // Apps Script 편집기에서 실행할 수 있는 추첨 테스트입니다. 토큰 시트에 테스트 행이 추가됩니다.
