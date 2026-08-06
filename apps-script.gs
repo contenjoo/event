@@ -482,7 +482,11 @@ function doGet(e) {
   var action = String(p.action || '').trim();
   // TV 별자리용 — 참가한 선생님 수(중복 참여·테스트 제외)
   if (action === 'count') return json({ ok: true, count: getParticipantCount() });
-  if (action === 'stats') return json(buildStats());   // 부스 운영용 집계(개인정보 없음)
+  if (action === 'stats') {
+    var stats = buildStats();
+    if (String(p.detail || '') === '1') addMizouPeopleStats(stats);  // 무거운 조인이라 요청할 때만
+    return json(stats);
+  }
   return ContentService.createTextOutput(API_MARKER);
 }
 
@@ -534,6 +538,37 @@ function incrementParticipantCount() {
   var next = getParticipantCount() + 1;
   PropertiesService.getScriptProperties().setProperty(PARTICIPANT_PROPERTY, String(next));
   return next;
+}
+
+// Mizou는 /r/ 추적을 거치지 않으므로, 발급된 링크의 토큰을 참가자와 이어 사람 수를 셉니다.
+// mizouOnly = 그 추첨에서 Mizou만 고른 분 → Snorkl·Redmenta 집계와 절대 겹치지 않는 인원.
+function addMizouPeopleStats(stats) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var pool = ss.getSheetByName(MIZOU_SHEET_NAME);
+  var tokens = ss.getSheetByName(TOKEN_SHEET_NAME);
+  if (!pool || !tokens || pool.getLastRow() <= 1 || tokens.getLastRow() <= 1) return;
+
+  var issued = {};
+  var poolRows = pool.getRange(2, 3, pool.getLastRow() - 1, 2).getValues();  // 발급시각, 토큰
+  for (var i = 0; i < poolRows.length; i++) {
+    if (poolRows[i][0] && poolRows[i][1]) issued[String(poolRows[i][1])] = true;
+  }
+
+  var tokenRows = tokens.getRange(2, 1, tokens.getLastRow() - 1, 4).getValues(); // 토큰, 생성시각, 클라이언트ID, 툴JSON
+  var people = {}, onlyMizou = {};
+  for (var j = 0; j < tokenRows.length; j++) {
+    var tk = String(tokenRows[j][0]);
+    if (!issued[tk]) continue;
+    var cid = String(tokenRows[j][2]);
+    if (!REAL_CLIENT_PATTERN.test(cid)) continue;
+    people[cid] = true;
+    try {
+      var tools = JSON.parse(String(tokenRows[j][3]));
+      if (tools && tools.length === 1 && tools[0] === 'Mizou') onlyMizou[cid] = true;
+    } catch (err) { /* 깨진 기록은 건너뜁니다 */ }
+  }
+  stats.mizouPeople = Object.keys(people).length;
+  stats.mizouOnlyPeople = Object.keys(onlyMizou).length;
 }
 
 function countParticipantsFromSheet() {
