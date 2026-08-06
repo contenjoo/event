@@ -24,7 +24,12 @@
   }
   #sky { position: fixed; inset: 0; z-index: 1; }
 
-  .overlay { position: fixed; inset: 0; z-index: 2; pointer-events: none; display: flex; flex-direction: column; }
+  /* 별이 많아져도 글자가 묻히지 않게 위·아래에 그늘을 깔아 둡니다. */
+  .scrim { position: fixed; left: 0; right: 0; z-index: 2; pointer-events: none; }
+  .scrim-top { top: 0; height: 34vh; background: linear-gradient(180deg, rgba(10,13,31,.92) 0%, rgba(10,13,31,.72) 45%, transparent 100%); }
+  .scrim-bottom { bottom: 0; height: 46vh; background: linear-gradient(0deg, rgba(10,13,31,.94) 0%, rgba(10,13,31,.78) 45%, transparent 100%); }
+
+  .overlay { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: flex; flex-direction: column; }
 
   header.title {
     text-align: center; padding: 4.5vh 4vw 0;
@@ -52,7 +57,8 @@
     max-width: min(1100px, 88vw); text-align: left;
     padding: clamp(12px, 1.8vh, 26px) clamp(18px, 2.4vw, 38px);
     border-radius: 22px;
-    background: rgba(20, 26, 58, .5); border: 1px solid rgba(154, 163, 207, .22);
+    background: rgba(12, 16, 38, .88); border: 1px solid rgba(154, 163, 207, .3);
+    backdrop-filter: blur(6px);
     transition: opacity .7s ease, transform .7s ease;
   }
   .toolspot.fade .ts-card { opacity: 0; transform: translateY(8px); }
@@ -150,6 +156,9 @@
 </head>
 <body>
 <canvas id="sky"></canvas>
+
+<div class="scrim scrim-top"></div>
+<div class="scrim scrim-bottom"></div>
 
 <div class="overlay">
   <header class="title">
@@ -360,17 +369,22 @@
     }
     ctx.globalAlpha = 1;
 
-    // 별자리 연결선(가까운 별끼리)
-    ctx.lineWidth = 1;
-    for (let i = 0; i < stars.length; i++) {
-      const a = stars[i];
-      for (let j = i + 1; j < Math.min(i + 4, stars.length); j++) {
-        const b = stars[j];
-        const dx = a.x - b.x, dy = a.y - b.y;
-        const d = Math.hypot(dx, dy);
-        if (d < Math.min(W, H) * 0.13) {
-          ctx.strokeStyle = `rgba(255,211,110,${0.10 * (1 - d / (Math.min(W, H) * 0.13))})`;
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    // 별이 많아질수록 작고 은은하게 — 수백 개가 되면 글자를 덮어버리기 때문
+    const scale = starScale();
+
+    // 별자리 연결선 — 촘촘해지면 오히려 지저분해서 끕니다.
+    if (count < 220) {
+      ctx.lineWidth = 1;
+      for (let i = 0; i < stars.length; i++) {
+        const a = stars[i];
+        for (let j = i + 1; j < Math.min(i + 4, stars.length); j++) {
+          const b = stars[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d = Math.hypot(dx, dy);
+          if (d < Math.min(W, H) * 0.13) {
+            ctx.strokeStyle = `rgba(255,211,110,${0.10 * (1 - d / (Math.min(W, H) * 0.13))})`;
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
         }
       }
     }
@@ -383,8 +397,8 @@
       if (s.pop < 1) s.pop = Math.min(1, s.pop + 0.045);
       const ease = 1 - Math.pow(1 - s.pop, 3);
       const twinkle = 0.72 + 0.28 * Math.sin(now * 0.0022 + s.twPhase);
-      const r = s.r * ease * (0.9 + 0.1 * twinkle);
-      drawStar(s.x, s.y, r, s.color, twinkle * ease);
+      const r = s.r * ease * (0.9 + 0.1 * twinkle) * scale;
+      drawStar(s.x, s.y, r, s.color, twinkle * ease * (0.45 + 0.55 * scale), scale);
     }
 
     // 등장 링 버스트
@@ -403,18 +417,26 @@
     requestAnimationFrame(frame);
   }
 
-  function drawStar(x, y, r, color, glow) {
-    // 광채
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 4.5);
+  // 별 수에 따른 크기·광량 배율 (150개까지는 원래 크기, 그 뒤로 서서히 작아짐)
+  function starScale() {
+    if (count <= 150) return 1;
+    return Math.max(0.38, Math.sqrt(150 / count));
+  }
+
+  function drawStar(x, y, r, color, glow, scale = 1) {
+    // 광채 — 별이 많으면 번짐을 줄여 배경이 하얗게 뜨지 않게 함
+    const spread = r * (2 + 2.5 * scale);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, spread);
     g.addColorStop(0, hexA(color, 0.55 * glow));
     g.addColorStop(0.4, hexA(color, 0.14 * glow));
     g.addColorStop(1, hexA(color, 0));
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r * 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, spread, 0, Math.PI * 2); ctx.fill();
     // 코어
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    // 십자 반짝임
+    // 십자 반짝임 — 촘촘할 때는 생략
+    if (scale < 0.75) return;
     ctx.strokeStyle = hexA(color, 0.5 * glow); ctx.lineWidth = 1;
     const sp = r * 3.2;
     ctx.beginPath();
