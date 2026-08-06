@@ -482,6 +482,7 @@ function doGet(e) {
   var action = String(p.action || '').trim();
   // TV 별자리용 — 참가한 선생님 수(중복 참여·테스트 제외)
   if (action === 'count') return json({ ok: true, count: getParticipantCount() });
+  if (action === 'toolStats') return json(buildToolStats());   // 도구별 선택 인원(개인정보 없음)
   if (action === 'stats') {
     var stats = buildStats();
     if (String(p.detail || '') === '1') addMizouPeopleStats(stats);  // 무거운 조인이라 요청할 때만
@@ -538,6 +539,37 @@ function incrementParticipantCount() {
   var next = getParticipantCount() + 1;
   PropertiesService.getScriptProperties().setProperty(PARTICIPANT_PROPERTY, String(next));
   return next;
+}
+
+// 도구별로 몇 분이 골랐는지 — 같은 분이 여러 번 돌려도 한 번만 센다.
+function buildToolStats() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TOKEN_SHEET_NAME);
+  var out = { ok: true, participants: 0, tools: {}, combos: {} };
+  if (!sheet || sheet.getLastRow() <= 1) return out;
+
+  var rows = sheet.getRange(2, 3, sheet.getLastRow() - 1, 2).getValues(); // 클라이언트ID, 툴JSON
+  var seenByTool = {}, everyone = {}, comboSeen = {};
+  TOOL_IDS.forEach(function (id) { seenByTool[id] = {}; });
+
+  for (var i = 0; i < rows.length; i++) {
+    var cid = String(rows[i][0] || '');
+    if (!REAL_CLIENT_PATTERN.test(cid)) continue;
+    everyone[cid] = true;
+    var tools;
+    try { tools = JSON.parse(String(rows[i][1])); } catch (err) { continue; }
+    if (!tools || !tools.length) continue;
+    for (var t = 0; t < tools.length; t++) {
+      if (seenByTool[tools[t]]) seenByTool[tools[t]][cid] = true;
+    }
+    var key = tools.slice().sort().join('+');
+    if (!comboSeen[key]) comboSeen[key] = {};
+    comboSeen[key][cid] = true;
+  }
+
+  out.participants = Object.keys(everyone).length;
+  TOOL_IDS.forEach(function (id) { out.tools[id] = Object.keys(seenByTool[id]).length; });
+  Object.keys(comboSeen).forEach(function (k) { out.combos[k] = Object.keys(comboSeen[k]).length; });
+  return out;
 }
 
 // Mizou는 /r/ 추적을 거치지 않으므로, 발급된 링크의 토큰을 참가자와 이어 사람 수를 셉니다.
