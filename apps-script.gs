@@ -128,6 +128,9 @@ function handleDraw(p) {
   }
   // 재시도가 오면 시트를 뒤져 같은 결과를 돌려줄 수 있게 흔적을 남깁니다.
   if (requestId) cache.put('req_' + requestId, '1', 1800);
+  // Mizou 링크를 받을 때 시트에서 토큰을 다시 찾지 않도록 필요한 값만 캐시에 둡니다.
+  cache.put('tok_' + token, JSON.stringify({ days: period.days, tools: tools, at: now.getTime() }),
+    Math.ceil(TOKEN_TTL_MILLISECONDS / 1000));
 
   return json({
     ok: true,
@@ -213,41 +216,79 @@ function handleClaimMizou(p) {
   var token = String(p.token || '').trim();
   if (!TOKEN_PATTERN.test(token)) return json({ ok: false, error: 'invalid_token' });
 
-  var tokenSheet = ensureTokenSheet();
-  var record = findTokenRecord(tokenSheet, token);
-  if (!record) return json({ ok: false, error: 'draw_expired' });
+  var cache = CacheService.getScriptCache();
+  var tierDays = 0;
+  var tools = null;
 
-  var createdAt = record.createdAt instanceof Date ? record.createdAt : new Date(record.createdAt);
-  if (!createdAt || isNaN(createdAt.getTime()) || Date.now() - createdAt.getTime() > TOKEN_TTL_MILLISECONDS) {
-    return json({ ok: false, error: 'draw_expired' });
+  // 추첨 때 캐시에 넣어 둔 값이 있으면 시트를 읽지 않습니다(대부분 이 경로).
+  var cachedToken = cache.get('tok_' + token);
+  if (cachedToken) {
+    try {
+      var info = JSON.parse(cachedToken);
+      if (Date.now() - Number(info.at) > TOKEN_TTL_MILLISECONDS) return json({ ok: false, error: 'draw_expired' });
+      tierDays = Number(info.days);
+      tools = info.tools;
+    } catch (err) { cachedToken = null; }
   }
 
-  // 등급은 토큰에 저장된 서버 결과만 사용합니다(브라우저 값 불신).
-  var tierDays = Number(record.days);
+  if (!cachedToken) {
+    var tokenSheet = ensureTokenSheet();
+    var record = findTokenRecord(tokenSheet, token);
+    if (!record) return json({ ok: false, error: 'draw_expired' });
+
+    var createdAt = record.createdAt instanceof Date ? record.createdAt : new Date(record.createdAt);
+    if (!createdAt || isNaN(createdAt.getTime()) || Date.now() - createdAt.getTime() > TOKEN_TTL_MILLISECONDS) {
+      return json({ ok: false, error: 'draw_expired' });
+    }
+    tierDays = Number(record.days);
+    try { tools = JSON.parse(record.toolsJson); } catch (err) { return json({ ok: false, error: 'invalid_token' }); }
+  }
+
+  // 등급은 서버가 정한 값만 사용합니다(브라우저 값 불신).
   var wantDays = MIZOU_DAYS_BY_TIER[tierDays];
   if (!wantDays) return json({ ok: false, error: 'invalid_token' });
-
-  var tools;
-  try { tools = JSON.parse(record.toolsJson); } catch (err) { return json({ ok: false, error: 'invalid_token' }); }
   if (!tools || tools.indexOf('Mizou') < 0) return json({ ok: false, error: 'not_eligible' });
 
+  // 같은 토큰이 다시 오면(새로고침 등) 재고를 더 쓰지 않고 같은 링크를 돌려줍니다.
+  var cached = cache.get('mz_' + token);
+  if (cached) return json({ ok: true, url: cached, days: wantDays });
+
   var sheet = ensureMizouSheet();
-  if (sheet.getLastRow() <= 1) return json({ ok: false, error: 'sold_out' });
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return json({ ok: false, error: 'sold_out' });
 
-  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
-  var firstFree = -1;
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][3]) === token) {
-      return json({ ok: true, url: String(rows[i][1]), days: Number(rows[i][0]) });
+  var found = takeMizouRow(sheet, lastRow, wantDays, token);
+  if (!found) return json({ ok: false, error: 'sold_out' });
+
+  cache.put('mz_' + token, found.url, Math.ceil(TOKEN_TTL_MILLISECONDS / 1000));
+  return json({ ok: true, url: found.url, days: wantDays });
+}
+
+// 660행을 매번 훑지 않도록 기간별로 "다음에 볼 행" 위치를 기억해 두고 조금씩만 읽습니다.
+var MIZOU_CHUNK = 60;
+
+function takeMizouRow(sheet, lastRow, wantDays, token) {
+  var props = PropertiesService.getScriptProperties();
+  var pointerKey = 'mizouPtr_' + wantDays;
+  var start = Number(props.getProperty(pointerKey));
+  if (!isFinite(start) || start < 2) start = 2;
+
+  for (var pass = 0; pass < 2; pass++) {          // 포인터부터 훑고, 없으면 처음부터 한 번 더
+    var row = pass === 0 ? start : 2;
+    while (row <= lastRow) {
+      var height = Math.min(MIZOU_CHUNK, lastRow - row + 1);
+      var chunk = sheet.getRange(row, 1, height, 3).getValues();
+      for (var i = 0; i < chunk.length; i++) {
+        if (Number(chunk[i][0]) !== wantDays || chunk[i][2]) continue;
+        var rowNumber = row + i;
+        sheet.getRange(rowNumber, 3, 1, 2).setValues([[new Date(), token]]);
+        props.setProperty(pointerKey, String(rowNumber + 1));
+        return { url: String(chunk[i][1]), rowNumber: rowNumber };
+      }
+      row += height;
     }
-    if (firstFree < 0 && Number(rows[i][0]) === wantDays && !rows[i][2]) firstFree = i;
   }
-  if (firstFree < 0) return json({ ok: false, error: 'sold_out' });
-
-  var rowNumber = firstFree + 2;
-  sheet.getRange(rowNumber, 3).setValue(new Date());
-  sheet.getRange(rowNumber, 4).setValue(token);
-  return json({ ok: true, url: String(rows[firstFree][1]), days: wantDays });
+  return null;
 }
 
 function ensureMizouSheet() {

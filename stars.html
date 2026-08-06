@@ -306,6 +306,9 @@
   .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
   /* 같은 서비스 두 번째 카드 — 가입을 또 시키지 않고 안내만 */
   .rcard .rsame { margin-top: 12px; font-size: 12.5px; color: var(--good); text-align: center; }
+  /* 지금 쓸지 / 저장해 둘지 갈림길 안내 */
+  .rcard .rhint { margin: 0 0 8px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+  .rcard .rhint b { color: #c3cbf0; }
   /* 커뮤니티 안내 — 체험권과 무관하게 언제든 들어올 수 있는 곳 */
   .rcard .rcomm {
     display: block; margin-top: 12px; padding: 11px; border-radius: 10px;
@@ -1014,8 +1017,9 @@
       (item.signupDone ? `<div class="rsame">✓ 위에서 가입한 ${escapeHtml(item.signup)} 계정으로 받으면 돼요</div>` : '') +
       `<a class="rgo" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">` +
         `${needsSignup ? `<b>②</b> ${escapeHtml(cta)} →` : `🚀 ${escapeHtml(cta)} →`}</a>` +
+      `<div class="rhint">지금 쓰실 거면 위 버튼, <b>나중에 쓰실 거면</b> 아래로 저장해 두세요</div>` +
       `<div class="rmini">` +
-        `<button type="button" data-act="share">📤 나에게 보내기</button>` +
+        `<button type="button" data-act="share">📤 카톡으로 보내기</button>` +
         `<button type="button" data-act="copy">🔗 링크 복사</button>` +
         `<button type="button" data-act="image">🖼️ 이미지 저장</button>` +
       `</div>` +
