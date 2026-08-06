@@ -119,8 +119,13 @@ function handleDraw(p) {
     '',
     safeCellText(requestId),
   ]);
-  // 토큰 저장이 성공한 draw만 TV 별자리에 반영 (LockService 내부라 동시성 안전)
+  // 토큰 저장이 성공한 draw만 집계 (LockService 내부라 동시성 안전)
   incrementStarCount();
+  // TV 별자리는 "선생님 한 분 = 별 하나" — 처음 보는 참가자일 때만 별을 켭니다.
+  if (REAL_CLIENT_PATTERN.test(clientId) && !cache.get('seen_' + clientId)) {
+    cache.put('seen_' + clientId, '1', 21600);   // 6시간(행사 하루) 동안 같은 분은 한 번만
+    incrementParticipantCount();
+  }
   // 재시도가 오면 시트를 뒤져 같은 결과를 돌려줄 수 있게 흔적을 남깁니다.
   if (requestId) cache.put('req_' + requestId, '1', 1800);
 
@@ -434,7 +439,8 @@ function json(obj) {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   var action = String(p.action || '').trim();
-  if (action === 'count') return json({ ok: true, count: countEntries() });
+  // TV 별자리용 — 참가한 선생님 수(중복 참여·테스트 제외)
+  if (action === 'count') return json({ ok: true, count: getParticipantCount() });
   if (action === 'stats') return json(buildStats());   // 부스 운영용 집계(개인정보 없음)
   return ContentService.createTextOutput(API_MARKER);
 }
@@ -468,6 +474,39 @@ function incrementStarCount() {
   return next;
 }
 
+var PARTICIPANT_PROPERTY = 'participantCount';
+
+// 참가 선생님 수 — 처음 조회할 때만 시트에서 세고, 이후에는 속성값을 씁니다.
+function getParticipantCount() {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty(PARTICIPANT_PROPERTY);
+  if (raw === null) {
+    var counted = countParticipantsFromSheet();
+    props.setProperty(PARTICIPANT_PROPERTY, String(counted));
+    return counted;
+  }
+  var value = Number(raw);
+  return isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function incrementParticipantCount() {
+  var next = getParticipantCount() + 1;
+  PropertiesService.getScriptProperties().setProperty(PARTICIPANT_PROPERTY, String(next));
+  return next;
+}
+
+function countParticipantsFromSheet() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TOKEN_SHEET_NAME);
+  if (!sheet || sheet.getLastRow() <= 1) return 0;
+  var ids = sheet.getRange(2, 3, sheet.getLastRow() - 1, 1).getValues();
+  var seen = {};
+  for (var i = 0; i < ids.length; i++) {
+    var id = String(ids[i][0] || '');
+    if (id && REAL_CLIENT_PATTERN.test(id)) seen[id] = true;
+  }
+  return Object.keys(seen).length;
+}
+
 // 참가자 브라우저는 clientId를 UUID(또는 client-... 폴백)로 만듭니다.
 // 개발 중 손으로 넣은 테스트 요청과 구분하는 기준입니다.
 var REAL_CLIENT_PATTERN = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|client-)/i;
@@ -476,17 +515,17 @@ var REAL_CLIENT_PATTERN = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
 function buildStats() {
   var stats = { ok: true, draws: countEntries(), mizouIssued: 0, mizouLeft: 0 };
 
-  // 실제 참가자 세션 수 (개인정보 아님 — 브라우저가 만든 임의 ID만 셈)
+  // 참가 선생님 수 — TV 별자리에 뜨는 값과 동일
+  stats.participants = getParticipantCount();
+
   var tokenSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TOKEN_SHEET_NAME);
   if (tokenSheet && tokenSheet.getLastRow() > 1) {
     var ids = tokenSheet.getRange(2, 3, tokenSheet.getLastRow() - 1, 1).getValues();
-    var real = {}, test = 0;
+    var test = 0;
     for (var k = 0; k < ids.length; k++) {
       var id = String(ids[k][0] || '');
-      if (!id) continue;
-      if (REAL_CLIENT_PATTERN.test(id)) real[id] = true; else test++;
+      if (id && !REAL_CLIENT_PATTERN.test(id)) test++;
     }
-    stats.participants = Object.keys(real).length;
     stats.participantDraws = ids.length - test;
     stats.testDraws = test;
   }
