@@ -306,6 +306,16 @@
   .rcard .rpending { margin-top: 10px; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
   /* 같은 서비스 두 번째 카드 — 가입을 또 시키지 않고 안내만 */
   .rcard .rsame { margin-top: 12px; font-size: 12.5px; color: var(--good); text-align: center; }
+  /* 받을 항목이 여러 개일 때 맨 위에서 먼저 알려 줍니다(아래 카드를 놓치지 않게) */
+  .rsummary {
+    margin: 0 0 14px; padding: 12px 14px; border-radius: 12px;
+    background: rgba(108,92,231,.14); border: 1px solid rgba(108,92,231,.5);
+    font-size: 13px; line-height: 1.65; color: var(--text);
+  }
+  .rsummary b { color: var(--gold); }
+  .rsummary .rs-head { display: block; font-weight: 800; margin-bottom: 4px; }
+  .rsummary:empty { display: none; }
+
   /* 지금 쓸지 / 저장해 둘지 갈림길 안내 */
   .rcard .rhint { margin: 0 0 8px; font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
   .rcard .rhint b { color: #c3cbf0; }
@@ -378,6 +388,7 @@
       <h2>🎉 체험권 당첨!</h2>
       <p class="lead">① <b style="color:var(--gold);">회원가입</b> → ② <b>체험권 받기</b> 순서로 눌러 주세요.<br/>지금 안 하셔도 폰에 저장해 두면 됩니다.</p>
 
+      <div class="rsummary" id="redeemSummary"></div>
       <div id="redeemCards"></div>
 
       <div class="notice">
@@ -936,7 +947,11 @@
     state.tools.forEach(id => {
       const t = TOOLS.find(x => x.id === id);
       // 같은 서비스 보너스를 먼저 — 과제를 추가한 뒤 체험권을 적용해야 순서가 자연스럽습니다.
-      bonusItems.filter(b => b.service === id && !b.taken).forEach(b => { b.taken = true; items.push(b); });
+      bonusItems.filter(b => b.service === id && !b.taken).forEach(b => {
+        b.taken = true;
+        b.about = '보너스예요. 이걸 먼저 받은 뒤 아래 체험권을 받아 주세요.';
+        items.push(b);
+      });
       items.push({
         id,
         service: id,
@@ -961,9 +976,16 @@
     const wrap = $('#redeemCards');
     wrap.innerHTML = '';
     // 같은 서비스가 두 장(예: Snorkl 과제 + 체험권) 나오면 회원가입은 첫 장에서만 안내합니다.
+    const all = redeemItems();
+    const summary = $('#redeemSummary');
+    summary.innerHTML = all.length > 1
+      ? `<span class="rs-head">🎁 받으실 항목 ${all.length}개 — 아래에서 하나씩 받아 주세요</span>` +
+        all.map(x => `${x.emoji} <b>${escapeHtml(x.title)}</b>`).join('<br/>')
+      : '';
+
     const signupShown = new Set();
     const communityShown = new Set();
-    redeemItems().forEach(raw => {
+    all.forEach(raw => {
       const item = Object.assign({}, raw);
       if (item.signupUrl) {
         if (signupShown.has(item.signupUrl)) item.signupDone = true;
