@@ -408,6 +408,8 @@
 (() => {
   // ================= CONFIG =================
   // Google Apps Script 웹 앱 URL (설정법: apps-script.gs 참고)
+  // 기본 백엔드는 Convex. 장애 시 아래 Apps Script로 자동 폴백합니다.
+  const EVENT_API = 'https://adjoining-starling-529.convex.site/event';
   const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyUyqugG6Q4snJl1tuy64N4j_6_6FkIZ1v29beGZfJ1cyCaNl3zektciC1eBPw2Qp5ekA/exec';
 
   // desc: STEP 1 선택지(선생님 고민 문장) / about: 당첨 카드에서 보여줄 기능 소개
@@ -460,7 +462,6 @@
 
   const $ = (s) => document.querySelector(s);
   const CLIENT_ID = getClientId();
-  let backendReady = false;
   const state = {
     tools: [], period: null, bonuses: [], drawToken: '', serverPrize: '', submitted: false,
     drawRequestId: '',
@@ -488,19 +489,34 @@
     }
   }
 
-  // Apps Script는 가끔 정상 응답 대신 구글 오류 페이지(HTML)를 돌려줍니다.
-  // 그때 참가자를 막지 않도록 몇 번 다시 시도합니다.
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  async function postJson(params, attempts = 4) {
-    let lastText = '';
+  // Convex를 먼저 부르고, 실패하면 Apps Script로 넘어갑니다.
+  // Apps Script는 가끔 정상 응답 대신 구글 오류 페이지(HTML)를 돌려주므로 거기서도 재시도합니다.
+  async function postJson(params, attempts = 3) {
+    const action = params.action;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const res = await fetch(`${EVENT_API}/${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data.ok === 'boolean') return data;
+        }
+      } catch (_) { /* 아래 폴백으로 */ }
+      if (i < attempts - 1) await sleep(300 * (i + 1));
+    }
+
     for (let i = 0; i < attempts; i++) {
       try {
         // 재시도라고 알려 주면 서버가 이전 결과를 찾아 돌려줍니다(첫 시도엔 그 조회를 건너뛰어 더 빠름).
         const body = i === 0 ? params : Object.assign({}, params, { retry: '1' });
         const res = await fetch(SHEET_ENDPOINT, { method: 'POST', body: new URLSearchParams(body) });
-        lastText = (await res.text()).trim();
-        if (lastText.startsWith('{')) return JSON.parse(lastText);
+        const text = (await res.text()).trim();
+        if (text.startsWith('{')) return JSON.parse(text);
       } catch (_) { /* 네트워크 오류도 재시도 */ }
       if (i < attempts - 1) await sleep(700 * (i + 1));
     }
@@ -509,30 +525,7 @@
     throw error;
   }
 
-  async function assertBackendReady() {
-    if (backendReady) return;
-    for (let i = 0; i < 4; i++) {
-      try {
-        const res = await fetch(SHEET_ENDPOINT, { cache: 'no-store' });
-        if (res.ok && (await res.text()).trim() === 'EVENT_API_V2') { backendReady = true; return; }
-      } catch (_) { /* 재시도 */ }
-      if (i < 3) await sleep(400 * (i + 1));
-    }
-    const error = new Error('backend_outdated');
-    error.code = 'backend_outdated';
-    throw error;
-  }
-
-  // 페이지가 열리자마자 Apps Script를 미리 깨워둡니다(콜드스타트 수 초 절약).
-  // 성공하면 "다음" 클릭 시 서버 확인 왕복이 0이 되고, 실패해도 클릭 때 다시 시도합니다.
-  assertBackendReady().catch(() => {});
-
   async function requestDraw() {
-    if (!SHEET_ENDPOINT) throw new Error('endpoint_missing');
-    // 웜업이 아직이면 잠깐만 기다리고, 늦어지면 그냥 추첨을 보냅니다(왕복 하나 절약).
-    if (!backendReady) {
-      await Promise.race([assertBackendReady().catch(() => {}), sleep(1200)]);
-    }
     // 재시도해도 같은 requestId면 서버가 이전 추첨 결과를 그대로 돌려줍니다(중복 발급 방지).
     if (!state.drawRequestId) state.drawRequestId = newId();
     const data = await postJson({

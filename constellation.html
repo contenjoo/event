@@ -192,6 +192,7 @@
 (() => {
   // ================= CONFIG =================
   // 게임(stars.html)과 같은 Apps Script 웹 앱 URL.
+  const EVENT_API = 'https://adjoining-starling-529.convex.site/event';
   const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyUyqugG6Q4snJl1tuy64N4j_6_6FkIZ1v29beGZfJ1cyCaNl3zektciC1eBPw2Qp5ekA/exec';
 
   // 로컬 미리보기용. true면 서버 없이 별이 저절로 늘어남.
@@ -481,8 +482,16 @@
   async function pollReal() {
     if (DEMO_MODE) return;
     try {
-      const res = await fetch(SHEET_ENDPOINT + '?action=count', { cache: 'no-store' });
-      const d = await res.json();
+      // Convex를 먼저 보고, 실패하면 Apps Script로 폴백합니다.
+      let d = null;
+      try {
+        const r = await fetch(EVENT_API + '/count', { cache: 'no-store' });
+        if (r.ok) d = await r.json();
+      } catch (_) { /* 폴백 */ }
+      if (!d || !d.ok) {
+        const res = await fetch(SHEET_ENDPOINT + '?action=count', { cache: 'no-store' });
+        d = await res.json();
+      }
       if (d && d.ok && Number.isFinite(d.count)) {
         // 첫 조회는 조용히 채우고, 이후 증가분만 축하 연출
         if (firstPoll) seedInitial(Number(d.count));
