@@ -996,9 +996,13 @@
       if (item.url === 'dynamic') {           // Mizou — 서버 재고에서 1회용 링크를 받아옵니다.
         renderPending(card, item, '🎟️ 전용 링크를 준비하는 중이에요…');
         claimMizouLink()
-          .then(url => {
-            if (url) renderLinkCard(card, Object.assign({}, item, { url }));
-            else renderPending(card, item, '🔧 준비된 링크가 모두 나갔어요 — 부스 직원에게 문의해 주세요.');
+          .then(got => {
+            if (!got) {
+              renderPending(card, item, '🔧 준비된 링크가 모두 나갔어요 — 부스 직원에게 문의해 주세요.');
+              return;
+            }
+            const title = got.months ? `${item.id} ${got.months}개월 체험권` : item.title;
+            renderLinkCard(card, Object.assign({}, item, { url: got.url, title }));
           })
           .catch(() => renderPending(card, item, '🔧 링크를 불러오지 못했어요 — 부스 직원에게 문의해 주세요.'));
         return;
@@ -1051,9 +1055,11 @@
 
   // 같은 토큰으로 다시 요청해도 서버가 같은 링크를 돌려줍니다(새로고침 시 재고 소모 없음).
   async function claimMizouLink() {
-    if (!state.drawToken) return '';
+    if (!state.drawToken) return null;
     const data = await postJson({ action: 'claimMizou', token: state.drawToken });
-    return data && data.ok && data.url ? String(data.url) : '';
+    if (!data || !data.ok || !data.url) return null;
+    // 재고 사정으로 다른 기간이 나갈 수 있어, 실제로 받은 기간을 그대로 표시합니다.
+    return { url: String(data.url), months: Math.round(Number(data.days) / 30) || 0 };
   }
 
   function markDone(btn, label) {
