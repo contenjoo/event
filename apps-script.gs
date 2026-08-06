@@ -468,9 +468,28 @@ function incrementStarCount() {
   return next;
 }
 
+// 참가자 브라우저는 clientId를 UUID(또는 client-... 폴백)로 만듭니다.
+// 개발 중 손으로 넣은 테스트 요청과 구분하는 기준입니다.
+var REAL_CLIENT_PATTERN = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|client-)/i;
+
 // 지금까지 나간 수량 — 추첨 수와 Mizou 링크 재고 현황.
 function buildStats() {
   var stats = { ok: true, draws: countEntries(), mizouIssued: 0, mizouLeft: 0 };
+
+  // 실제 참가자 세션 수 (개인정보 아님 — 브라우저가 만든 임의 ID만 셈)
+  var tokenSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TOKEN_SHEET_NAME);
+  if (tokenSheet && tokenSheet.getLastRow() > 1) {
+    var ids = tokenSheet.getRange(2, 3, tokenSheet.getLastRow() - 1, 1).getValues();
+    var real = {}, test = 0;
+    for (var k = 0; k < ids.length; k++) {
+      var id = String(ids[k][0] || '');
+      if (!id) continue;
+      if (REAL_CLIENT_PATTERN.test(id)) real[id] = true; else test++;
+    }
+    stats.participants = Object.keys(real).length;
+    stats.participantDraws = ids.length - test;
+    stats.testDraws = test;
+  }
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MIZOU_SHEET_NAME);
   if (sheet && sheet.getLastRow() > 1) {
     var rows = sheet.getRange(2, 3, sheet.getLastRow() - 1, 1).getValues();
