@@ -245,6 +245,15 @@
   @keyframes claimpop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
   /* ---- done ---- */
+  /* 행사 종료 화면 — 커뮤니티는 계속 열려 있으니 눈에 띄게 */
+  .closed-comm {
+    display: block; margin-top: 16px; padding: 13px; border-radius: 12px;
+    text-align: center; text-decoration: none;
+    font-size: 14px; font-weight: 800; color: #1a1f3c;
+    background: linear-gradient(135deg, #ffd36e, #ffb84d);
+  }
+  .closed-comm:active { transform: translateY(1px); }
+
   .done-box { text-align: center; padding: 18px 0 8px; }
   .done-box .big-emoji { font-size: 54px; }
   .done-box h2 { margin: 12px 0 8px; }
@@ -347,7 +356,27 @@
   <div class="card">
 
     <!-- STEP 1: choose tools (multi) -->
-    <section class="step on" id="stepTools">
+    <!-- 행사 종료 — 새 참여는 받지 않고, 이미 받은 체험권 링크는 그대로 사용할 수 있습니다. -->
+    <section class="step on" id="stepClosed">
+      <div class="done-box">
+        <div class="big-emoji">🌌</div>
+        <h2>행사가 마무리되었습니다</h2>
+        <p>
+          2026 AI 활용 교육 콘퍼런스에 함께해 주신 선생님들,<br/>
+          <b>1,226분</b>이 각자의 <b>수업의 별</b>을 밝혀 주셨어요. 고맙습니다.
+        </p>
+        <div class="notice" style="text-align:left;">
+          🎁 <b>이미 받으신 체험권 링크는 그대로 사용하실 수 있어요.</b><br/>
+          저장해 두신 링크나 쿠폰 이미지를 그대로 열어 주세요.<br/>
+          링크를 잃어버리셨거나 문제가 있으면 <b>joo@learntoday.kr</b> 로 문의해 주세요.
+        </div>
+        <a class="closed-comm" href="https://open.kakao.com/o/gkyPvfWh" target="_blank" rel="noopener">
+          💬 Snorklers 한국 커뮤니티 — 언제든 들어오세요
+        </a>
+      </div>
+    </section>
+
+    <section class="step" id="stepTools">
       <div class="step-label">STEP 1 / 3</div>
       <h2>오늘, 어떤 수업을 더 <b>빛나게</b> 하고 싶으세요?</h2>
       <p class="lead" id="toolLead">함께할 도구를 골라주세요.</p>

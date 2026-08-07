@@ -66,7 +66,11 @@ function doPost(e) {
   }
 }
 
+// 행사 종료 — 새 추첨은 받지 않습니다. 이미 발급된 링크와 집계 조회는 그대로 동작합니다.
+var EVENT_CLOSED = true;
+
 function handleDraw(p) {
+  if (EVENT_CLOSED) return json({ ok: false, error: 'event_closed' });
   var tools = parseTools(p.tools);
   var clientId = String(p.clientId || '').trim();
   if (!tools || !CLIENT_ID_PATTERN.test(clientId)) {
