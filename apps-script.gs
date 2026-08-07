@@ -483,6 +483,7 @@ function doGet(e) {
   // TV 별자리용 — 참가한 선생님 수(중복 참여·테스트 제외)
   if (action === 'count') return json({ ok: true, count: getParticipantCount() });
   if (action === 'toolStats') return json(buildToolStats());   // 도구별 선택 인원(개인정보 없음)
+  if (action === 'dailyStats') return json(buildDailyStats()); // 날짜별 참여·도구 인원
   if (action === 'stats') {
     var stats = buildStats();
     if (String(p.detail || '') === '1') addMizouPeopleStats(stats);  // 무거운 조인이라 요청할 때만
@@ -539,6 +540,44 @@ function incrementParticipantCount() {
   var next = getParticipantCount() + 1;
   PropertiesService.getScriptProperties().setProperty(PARTICIPANT_PROPERTY, String(next));
   return next;
+}
+
+// 날짜(한국시간)별 참여 인원과 도구별 인원 — 같은 분이 여러 번 돌려도 하루에 한 번만 센다.
+function buildDailyStats() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TOKEN_SHEET_NAME);
+  var out = { ok: true, days: {} };
+  if (!sheet || sheet.getLastRow() <= 1) return out;
+
+  var rows = sheet.getRange(2, 2, sheet.getLastRow() - 1, 3).getValues(); // 생성시각, 클라이언트ID, 툴JSON
+  var byDay = {};
+
+  for (var i = 0; i < rows.length; i++) {
+    var when = rows[i][0] instanceof Date ? rows[i][0] : new Date(rows[i][0]);
+    if (!when || isNaN(when.getTime())) continue;
+    var cid = String(rows[i][1] || '');
+    if (!REAL_CLIENT_PATTERN.test(cid)) continue;
+
+    var day = Utilities.formatDate(when, 'Asia/Seoul', 'yyyy-MM-dd');
+    if (!byDay[day]) {
+      byDay[day] = { everyone: {}, tools: {} };
+      TOOL_IDS.forEach(function (id) { byDay[day].tools[id] = {}; });
+    }
+    byDay[day].everyone[cid] = true;
+
+    var tools;
+    try { tools = JSON.parse(String(rows[i][2])); } catch (err) { continue; }
+    if (!tools) continue;
+    for (var t = 0; t < tools.length; t++) {
+      if (byDay[day].tools[tools[t]]) byDay[day].tools[tools[t]][cid] = true;
+    }
+  }
+
+  Object.keys(byDay).sort().forEach(function (day) {
+    var entry = { participants: Object.keys(byDay[day].everyone).length, tools: {} };
+    TOOL_IDS.forEach(function (id) { entry.tools[id] = Object.keys(byDay[day].tools[id]).length; });
+    out.days[day] = entry;
+  });
+  return out;
 }
 
 // 도구별로 몇 분이 골랐는지 — 같은 분이 여러 번 돌려도 한 번만 센다.
